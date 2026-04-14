@@ -3,19 +3,24 @@ import { createBrowserClient } from "@supabase/ssr";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import type { Database } from "@/lib/supabase/database.types";
 
-function getEnv(name: "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") {
-  const value = process.env[name];
+function getSupabaseBrowserEnv() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabasePublishableKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-  if (!value) {
-    throw new Error(`Missing env.${name}`);
+  if (!supabaseUrl) {
+    throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_URL");
   }
 
-  return value;
+  if (!supabasePublishableKey) {
+    throw new Error("Missing env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+  }
+
+  return { supabaseUrl, supabasePublishableKey };
 }
 
 export function createClient() {
-  const supabaseUrl = getEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const supabasePublishableKey = getEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+  const { supabaseUrl, supabasePublishableKey } = getSupabaseBrowserEnv();
   const hostname =
     typeof window === "undefined" ? undefined : window.location.hostname;
 

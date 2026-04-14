@@ -12,7 +12,7 @@
 # Error details
 
 ```
-Error: Login stayed on /login due to runtime error: Missing env.NEXT_PUBLIC_SUPABASE_URL
+Error: Login stayed on /login with error: Authentication is misconfigured: missing NEXT_PUBLIC_SUPABASE_URL.
 ```
 
 # Page snapshot
@@ -50,8 +50,9 @@ Error: Login stayed on /login due to runtime error: Missing env.NEXT_PUBLIC_SUPA
             - textbox "Password" [ref=e32]:
               - /placeholder: Enter your password
               - text: "12345678"
-          - button "Sign in" [active] [ref=e33]
-  - alert [ref=e34]
+          - alert [ref=e33]: "Authentication is misconfigured: missing NEXT_PUBLIC_SUPABASE_URL."
+          - button "Sign in" [active] [ref=e34]
+  - alert [ref=e35]
 ```
 
 # Test source
@@ -104,8 +105,7 @@ Error: Login stayed on /login due to runtime error: Missing env.NEXT_PUBLIC_SUPA
   45 |       });
   46 |     } catch (waitError) {
   47 |       if (runtimePageErrors.length > 0) {
-> 48 |         throw new Error(
-     |               ^ Error: Login stayed on /login due to runtime error: Missing env.NEXT_PUBLIC_SUPABASE_URL
+  48 |         throw new Error(
   49 |           `Login stayed on /login due to runtime error: ${runtimePageErrors.join(" | ")}`,
   50 |         );
   51 |       }
@@ -115,7 +115,8 @@ Error: Login stayed on /login due to runtime error: Missing env.NEXT_PUBLIC_SUPA
   55 | 
   56 |       if (hasLoginErrorAlert) {
   57 |         const alertText = (await loginErrorAlert.innerText()).trim();
-  58 |         throw new Error(`Login stayed on /login with error: ${alertText || "Unknown error"}`);
+> 58 |         throw new Error(`Login stayed on /login with error: ${alertText || "Unknown error"}`);
+     |               ^ Error: Login stayed on /login with error: Authentication is misconfigured: missing NEXT_PUBLIC_SUPABASE_URL.
   59 |       }
   60 | 
   61 |       throw waitError;
