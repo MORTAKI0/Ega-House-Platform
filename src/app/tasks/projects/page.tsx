@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -136,11 +135,13 @@ function EmptyState() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap items-center gap-3">
-        <Button variant="secondary" disabled>
-          Project creation comes next
-        </Button>
+        <form action="/tasks/projects/new">
+          <Button variant="secondary" type="submit">
+            Create first project
+          </Button>
+        </form>
         <p className="text-sm leading-7 text-slate-400">
-          This MVP intentionally stops at the read-only list view.
+          Create one project to start attaching goals and tasks.
         </p>
       </CardContent>
     </Card>
@@ -228,6 +229,11 @@ export default async function TasksProjectsPage() {
       eyebrow="Tasks Workspace"
       title="Projects"
       description="Projects grounded in the live tasks schema, with enough context to see task volume and current execution without building detail pages yet."
+      actions={
+        <form action="/tasks/projects/new">
+          <Button type="submit">Create project</Button>
+        </form>
+      }
       navigation={
         <>
           <Badge tone="accent">Projects</Badge>
