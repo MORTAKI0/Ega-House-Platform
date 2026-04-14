@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1776175387265,
+      "tag": "0000_green_warpath",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776175629749,
+      "tag": "0001_narrow_bastion",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776175783653,
+      "tag": "0002_famous_whirlwind",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776176051543,
+      "tag": "0003_ordinary_hedge_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776176307552,
+      "tag": "0004_sloppy_reptil",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776176634772,
+      "tag": "0005_enable_rls_and_policies",
+      "breakpoints": true
+    }
+  ]
+}
