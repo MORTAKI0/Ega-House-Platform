@@ -11,7 +11,7 @@ const PROTECTED_HOSTS = new Set([
   "timer.egawilldoit.online",
   "review.egawilldoit.online",
 ]);
-const LOGIN_HOST = "egawilldoit.online";
+const LOGIN_HOST = "www.egawilldoit.online";
 const PROTECTED_ROOT_PATH_PREFIXES: Array<`/${string}`> = [
   "/goals",
   "/tasks",

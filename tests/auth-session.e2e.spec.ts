@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const protocol = process.env.E2E_AUTH_PROTOCOL ?? "https";
 const platformRootDomain = process.env.E2E_AUTH_PLATFORM_DOMAIN ?? "egawilldoit.online";
-const loginHost = process.env.E2E_AUTH_LOGIN_HOST ?? platformRootDomain;
+const loginHost = process.env.E2E_AUTH_LOGIN_HOST ?? `www.${platformRootDomain}`;
 const email = process.env.E2E_AUTH_EMAIL;
 const password = process.env.E2E_AUTH_PASSWORD;
 
@@ -29,13 +29,37 @@ test.describe("Cross-subdomain auth session", () => {
   test("login once and stay authenticated across protected subdomains", async ({
     page,
   }) => {
+    const runtimePageErrors: string[] = [];
+    page.on("pageerror", (error) => {
+      runtimePageErrors.push(error.message);
+    });
+
     await page.goto(`${protocol}://${loginHost}/login`);
     await page.getByLabel("Email").fill(email ?? "");
     await page.getByLabel("Password").fill(password ?? "");
     await page.getByRole("button", { name: "Sign in" }).click();
-    await page.waitForURL((url) => !url.pathname.startsWith("/login"), {
-      timeout: 20_000,
-    });
+
+    try {
+      await page.waitForURL((url) => !url.pathname.startsWith("/login"), {
+        timeout: 20_000,
+      });
+    } catch (waitError) {
+      if (runtimePageErrors.length > 0) {
+        throw new Error(
+          `Login stayed on /login due to runtime error: ${runtimePageErrors.join(" | ")}`,
+        );
+      }
+
+      const loginErrorAlert = page.getByRole("alert").first();
+      const hasLoginErrorAlert = await loginErrorAlert.isVisible().catch(() => false);
+
+      if (hasLoginErrorAlert) {
+        const alertText = (await loginErrorAlert.innerText()).trim();
+        throw new Error(`Login stayed on /login with error: ${alertText || "Unknown error"}`);
+      }
+
+      throw waitError;
+    }
 
     for (const [workspace, host] of Object.entries(workspaceHosts) as Array<
       [keyof typeof workspaceHosts, string]

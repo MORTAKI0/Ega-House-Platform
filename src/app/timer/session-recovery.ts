@@ -31,7 +31,9 @@ export function resolveSessionConflict(
   }
 
   const sorted = [...openSessions].sort(
-    (left, right) => toMs(right.started_at) - toMs(left.started_at),
+    (left, right) =>
+      toMs(right.started_at) - toMs(left.started_at) ||
+      right.id.localeCompare(left.id),
   );
 
   const canonical = sorted[0];

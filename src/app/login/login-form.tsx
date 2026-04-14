@@ -59,6 +59,14 @@ function getErrorMessage(message?: string) {
     return "Unable to sign in. Check your credentials and try again.";
   }
 
+  if (message.includes("Missing env.NEXT_PUBLIC_SUPABASE_URL")) {
+    return "Authentication is misconfigured: missing NEXT_PUBLIC_SUPABASE_URL.";
+  }
+
+  if (message.includes("Missing env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")) {
+    return "Authentication is misconfigured: missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.";
+  }
+
   return message;
 }
 
@@ -116,6 +124,12 @@ export function LoginForm() {
       }
 
       window.location.assign(safeRedirect.href);
+    } catch (submissionError) {
+      const message =
+        submissionError instanceof Error
+          ? submissionError.message
+          : "Unexpected sign-in failure.";
+      setError(getErrorMessage(message));
     } finally {
       setIsSubmitting(false);
     }
