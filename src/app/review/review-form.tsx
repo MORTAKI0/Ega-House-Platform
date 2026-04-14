@@ -1,0 +1,83 @@
+"use client";
+
+import { useActionState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+
+import { type SaveReviewFormState, saveReviewAction } from "./actions";
+
+type ReviewFormProps = {
+  defaultWeekOf: string;
+};
+
+export function ReviewForm({ defaultWeekOf }: ReviewFormProps) {
+  const initialState: SaveReviewFormState = {
+    error: null,
+    saved: false,
+    values: {
+      reflection: "",
+      weekOf: defaultWeekOf,
+    },
+  };
+
+  const [state, formAction, isPending] = useActionState(
+    saveReviewAction,
+    initialState,
+  );
+
+  return (
+    <form action={formAction} className="space-y-4">
+      <div className="space-y-2">
+        <label htmlFor="weekOf" className="text-sm font-medium text-slate-200">
+          Week date
+        </label>
+        <input
+          id="weekOf"
+          type="date"
+          name="weekOf"
+          required
+          defaultValue={state.values.weekOf}
+          className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition focus:border-cyan-300/50 focus-visible:ring-4 focus-visible:ring-cyan-300/15"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label
+          htmlFor="reflection"
+          className="text-sm font-medium text-slate-200"
+        >
+          Reflection
+        </label>
+        <Textarea
+          id="reflection"
+          name="reflection"
+          required
+          minLength={20}
+          placeholder="What worked, what failed, and what you will change next week."
+          defaultValue={state.values.reflection}
+          className="min-h-44"
+        />
+      </div>
+
+      {state.error ? (
+        <p
+          role="alert"
+          className="rounded-2xl border border-rose-400/35 bg-rose-400/10 px-4 py-3 text-sm leading-7 text-rose-100"
+        >
+          {state.error}
+        </p>
+      ) : null}
+
+      {state.saved ? (
+        <p className="rounded-2xl border border-emerald-400/35 bg-emerald-400/12 px-4 py-3 text-sm leading-7 text-emerald-100">
+          Review saved.
+        </p>
+      ) : null}
+
+      <Button type="submit" disabled={isPending}>
+        {isPending ? "Saving..." : "Save review"}
+      </Button>
+    </form>
+  );
+}

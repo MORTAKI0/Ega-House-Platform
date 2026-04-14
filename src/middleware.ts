@@ -12,6 +12,12 @@ const PROTECTED_HOSTS = new Set([
   "review.egawilldoit.online",
 ]);
 const LOGIN_HOST = "egawilldoit.online";
+const PROTECTED_ROOT_PATH_PREFIXES: Array<`/${string}`> = [
+  "/goals",
+  "/tasks",
+  "/timer",
+  "/review",
+];
 
 const SUBDOMAIN_PREFIXES: Record<string, `/${string}`> = {
   "goals.egawilldoit.online": "/goals",
@@ -52,6 +58,12 @@ function getRequestHostname(request: NextRequest) {
 
 function shouldSkipRewrite(pathname: string, prefix: `/${string}`) {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function isProtectedRootPath(pathname: string) {
+  return PROTECTED_ROOT_PATH_PREFIXES.some((prefix) =>
+    shouldSkipRewrite(pathname, prefix),
+  );
 }
 
 function copySupabaseResponse(
@@ -132,8 +144,25 @@ async function updateSession(request: NextRequest) {
 export async function middleware(request: NextRequest) {
   const hostname = getRequestHostname(request);
 
-  if (!hostname || ROOT_HOSTS.has(hostname)) {
+  if (!hostname) {
     return NextResponse.next();
+  }
+
+  if (ROOT_HOSTS.has(hostname)) {
+    if (!isProtectedRootPath(request.nextUrl.pathname)) {
+      return NextResponse.next();
+    }
+
+    const { error, hasSession, response } = await updateSession(request);
+
+    if (error || !hasSession) {
+      return copySupabaseResponse(
+        response,
+        NextResponse.redirect(createLoginRedirect(request, hostname))
+      );
+    }
+
+    return copySupabaseResponse(response, NextResponse.next());
   }
 
   const prefix = SUBDOMAIN_PREFIXES[hostname];
