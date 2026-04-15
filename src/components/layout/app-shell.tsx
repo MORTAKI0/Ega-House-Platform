@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 import { cn } from "@/lib/utils";
+import { headers } from "next/headers";
 
 type AppShellProps = {
   children: ReactNode;
@@ -13,7 +15,52 @@ type AppShellProps = {
   contentClassName?: string;
 };
 
-export function AppShell({
+type WorkspaceNavItem = {
+  href: `/${string}`;
+  label: string;
+};
+
+const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
+  { href: "/tasks", label: "Tasks" },
+  { href: "/goals", label: "Goals" },
+  { href: "/timer", label: "Timer" },
+  { href: "/review", label: "Review" },
+];
+
+function isActiveWorkspace(pathname: string, href: `/${string}`) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+async function WorkspaceNav() {
+  const headerStore = await headers();
+  const pathname = headerStore.get("x-current-path") ?? "/";
+
+  return (
+    <nav aria-label="Workspace navigation" className="flex flex-wrap gap-2">
+      {WORKSPACE_NAV_ITEMS.map((item) => {
+        const isActive = isActiveWorkspace(pathname, item.href);
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={isActive ? "page" : undefined}
+            className={cn(
+              "inline-flex h-10 items-center rounded-full border px-4 text-sm font-medium transition",
+              isActive
+                ? "border-cyan-300/40 bg-cyan-400/15 text-cyan-100 shadow-[0_0_0_1px_rgba(103,232,249,0.12)]"
+                : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/20 hover:bg-white/[0.06] hover:text-white",
+            )}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export async function AppShell({
   children,
   eyebrow,
   title,
@@ -55,6 +102,8 @@ export function AppShell({
               <div className="flex flex-wrap items-center gap-3">{actions}</div>
             ) : null}
           </div>
+
+          <WorkspaceNav />
 
           {navigation ? (
             <div className="flex flex-wrap items-center gap-3">{navigation}</div>

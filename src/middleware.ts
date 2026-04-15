@@ -98,8 +98,13 @@ function createLoginRedirect(request: NextRequest, hostname: string) {
 }
 
 async function updateSession(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-current-path", request.nextUrl.pathname);
+
   let response = NextResponse.next({
-    request,
+    request: {
+      headers: requestHeaders,
+    },
   });
 
   const hostname = getRequestHostname(request);
@@ -118,7 +123,9 @@ async function updateSession(request: NextRequest) {
         });
 
         response = NextResponse.next({
-          request,
+          request: {
+            headers: requestHeaders,
+          },
         });
 
         cookiesToSet.forEach(({ name, value, options }) => {

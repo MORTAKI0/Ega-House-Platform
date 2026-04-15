@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,8 +10,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/server";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session) {
+    redirect("/tasks");
+  }
+
   return (
     <AppShell
       eyebrow="Shared Foundation"
@@ -17,9 +29,7 @@ export default function Home() {
       description="The visual system, app shell, and shared primitives are now in place for the goals, tasks, timer, and review surfaces."
       actions={
         <>
-          <Button className="min-w-36">
-            Explore foundation
-          </Button>
+          <Button className="min-w-36">Explore foundation</Button>
           <Button variant="secondary" className="min-w-36">
             Review auth flow
           </Button>
