@@ -5,7 +5,19 @@ import {
   getTaskSessionDurationSeconds,
 } from "@/lib/task-session";
 
+import {
+  getLinearProjectSnapshot,
+  type LinearIssueStatusCount,
+  type LinearMilestoneSnapshot,
+} from "./linear-dashboard";
+
 const TODAY_TASK_LIMIT = 8;
+const PANEL_ERROR_MESSAGES = {
+  todaysTasks: "Could not load today's tasks right now.",
+  activeTimer: "Could not load the active timer right now.",
+  projectStatuses: "Could not load project statuses right now.",
+  linearProject: "Could not load the Linear snapshot right now.",
+} as const;
 
 type PanelResult<T> =
   | {
@@ -54,12 +66,33 @@ export type DashboardProjectStatus = {
   updatedAt: string;
 };
 
+export type DashboardLinearProject = {
+  id: string;
+  name: string;
+  url: string | null;
+  status: string | null;
+  targetDate: string | null;
+  priority: string | null;
+  updatedAt: string;
+  milestones: LinearMilestoneSnapshot[];
+  issueStatusCounts: LinearIssueStatusCount[];
+};
+
 export type DashboardData = {
   health: DashboardHealthData;
   todaysTasks: PanelResult<DashboardTodayTask[]>;
   activeTimer: PanelResult<DashboardActiveSession | null>;
   projectStatuses: PanelResult<DashboardProjectStatus[]>;
+  linearProject: PanelResult<DashboardLinearProject | null>;
 };
+
+function isLinearTokenMissingError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return error.message.includes("Linear API token is not configured");
+}
 
 function getTodayWindow() {
   const now = new Date();
@@ -113,7 +146,7 @@ async function getTodaysTasks(): Promise<PanelResult<DashboardTodayTask[]>> {
     if (error) {
       return {
         data: null,
-        error: `Failed to load today's tasks: ${error.message}`,
+        error: PANEL_ERROR_MESSAGES.todaysTasks,
       };
     }
 
@@ -129,13 +162,10 @@ async function getTodaysTasks(): Promise<PanelResult<DashboardTodayTask[]>> {
       })),
       error: null,
     };
-  } catch (error) {
+  } catch {
     return {
       data: null,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to load today's tasks.",
+      error: PANEL_ERROR_MESSAGES.todaysTasks,
     };
   }
 }
@@ -157,7 +187,7 @@ async function getActiveTimer(): Promise<PanelResult<DashboardActiveSession | nu
     if (error) {
       return {
         data: null,
-        error: `Failed to load active timer: ${error.message}`,
+        error: PANEL_ERROR_MESSAGES.activeTimer,
       };
     }
 
@@ -187,11 +217,10 @@ async function getActiveTimer(): Promise<PanelResult<DashboardActiveSession | nu
       },
       error: null,
     };
-  } catch (error) {
+  } catch {
     return {
       data: null,
-      error:
-        error instanceof Error ? error.message : "Failed to load active timer.",
+      error: PANEL_ERROR_MESSAGES.activeTimer,
     };
   }
 }
@@ -208,7 +237,7 @@ async function getProjectStatuses(): Promise<PanelResult<DashboardProjectStatus[
     if (error) {
       return {
         data: null,
-        error: `Failed to load project statuses: ${error.message}`,
+        error: PANEL_ERROR_MESSAGES.projectStatuses,
       };
     }
 
@@ -222,29 +251,69 @@ async function getProjectStatuses(): Promise<PanelResult<DashboardProjectStatus[
       })),
       error: null,
     };
-  } catch (error) {
+  } catch {
     return {
       data: null,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to load project statuses.",
+      error: PANEL_ERROR_MESSAGES.projectStatuses,
+    };
+  }
+}
+
+async function getLinearProject(): Promise<PanelResult<DashboardLinearProject | null>> {
+  try {
+    const project = await getLinearProjectSnapshot();
+
+    if (!project) {
+      return {
+        data: null,
+        error: null,
+      };
+    }
+
+    return {
+      data: {
+        id: project.id,
+        name: project.name,
+        url: project.url,
+        status: project.status,
+        targetDate: project.targetDate,
+        priority: project.priority,
+        updatedAt: project.updatedAt,
+        milestones: project.milestones,
+        issueStatusCounts: project.issueStatusCounts,
+      },
+      error: null,
+    };
+  } catch (error) {
+    if (isLinearTokenMissingError(error)) {
+      return {
+        data: null,
+        error: null,
+      };
+    }
+
+    return {
+      data: null,
+      error: PANEL_ERROR_MESSAGES.linearProject,
     };
   }
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
-  const [health, todaysTasks, activeTimer, projectStatuses] = await Promise.all([
-    getDashboardHealthData(),
-    getTodaysTasks(),
-    getActiveTimer(),
-    getProjectStatuses(),
-  ]);
+  const [health, todaysTasks, activeTimer, projectStatuses, linearProject] =
+    await Promise.all([
+      getDashboardHealthData(),
+      getTodaysTasks(),
+      getActiveTimer(),
+      getProjectStatuses(),
+      getLinearProject(),
+    ]);
 
   return {
     health,
     todaysTasks,
     activeTimer,
     projectStatuses,
+    linearProject,
   };
 }

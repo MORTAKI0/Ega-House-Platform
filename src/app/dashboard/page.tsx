@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 
 import {
   ActiveTimerPanel,
+  LinearProgressPanel,
   ProjectStatusPanel,
   TodaysTasksPanel,
 } from "./_components/dashboard-panels";
@@ -17,7 +18,8 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const { health, todaysTasks, activeTimer, projectStatuses } = await getDashboardData();
+  const { health, todaysTasks, activeTimer, projectStatuses, linearProject } =
+    await getDashboardData();
 
   return (
     <AppShell
@@ -43,6 +45,10 @@ export default async function DashboardPage() {
           <ProjectStatusPanel
             projects={projectStatuses.data}
             error={projectStatuses.error}
+          />
+          <LinearProgressPanel
+            project={linearProject.data}
+            error={linearProject.error}
           />
         </div>
       </div>
