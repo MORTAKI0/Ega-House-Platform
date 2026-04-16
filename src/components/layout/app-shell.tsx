@@ -21,6 +21,7 @@ type WorkspaceNavItem = {
 };
 
 const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/tasks", label: "Tasks" },
   { href: "/goals", label: "Goals" },
   { href: "/timer", label: "Timer" },

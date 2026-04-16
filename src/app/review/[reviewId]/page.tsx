@@ -1,0 +1,122 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { AppShell } from "@/components/layout/app-shell";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { formatDateTime, formatIsoDate } from "@/lib/review-week";
+import { createClient } from "@/lib/supabase/server";
+
+type ReviewDetailPageProps = {
+  params: Promise<{
+    reviewId: string;
+  }>;
+};
+
+export const metadata = {
+  title: "Past Review | EGA House",
+  description: "Inspect a saved weekly review entry.",
+};
+
+async function getReview(reviewId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("week_reviews")
+    .select("id, week_start, week_end, summary, wins, blockers, next_steps, created_at, updated_at")
+    .eq("id", reviewId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load review: ${error.message}`);
+  }
+
+  return data;
+}
+
+function toFieldValue(value: string | null, fallback = "Not provided.") {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+function DetailField({ label, value }: { label: string; value: string | null }) {
+  return (
+    <article className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-4">
+      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</p>
+      <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-200">
+        {toFieldValue(value)}
+      </p>
+    </article>
+  );
+}
+
+export default async function ReviewDetailPage({ params }: ReviewDetailPageProps) {
+  const { reviewId } = await params;
+  const review = await getReview(reviewId);
+
+  if (!review) {
+    notFound();
+  }
+
+  return (
+    <AppShell
+      eyebrow="Review Workspace"
+      title="Past review detail"
+      description="Inspect a full weekly review entry and its captured reflection fields."
+      actions={
+        <Link
+          href="/review"
+          className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/15 bg-white/8 px-5 text-sm font-medium text-slate-100 transition duration-200 hover:border-cyan-300/40 hover:bg-cyan-300/10"
+        >
+          Back to review workspace
+        </Link>
+      }
+      navigation={
+        <>
+          <Badge tone="accent">{formatIsoDate(review.week_start)}</Badge>
+          <Badge>{formatIsoDate(review.week_end)}</Badge>
+        </>
+      }
+    >
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Weekly review</CardTitle>
+            <CardDescription>
+              {formatIsoDate(review.week_start)} to {formatIsoDate(review.week_end)}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <DetailField label="Summary / Reflection" value={review.summary} />
+            <DetailField label="Wins" value={review.wins} />
+            <DetailField label="Blockers" value={review.blockers} />
+            <DetailField label="Next steps" value={review.next_steps} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Record metadata</CardTitle>
+            <CardDescription>Lifecycle timestamps for this review record.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm leading-7 text-slate-300">
+            <p>
+              <span className="text-slate-400">Created:</span> {formatDateTime(review.created_at)}
+            </p>
+            <p>
+              <span className="text-slate-400">Updated:</span> {formatDateTime(review.updated_at)}
+            </p>
+            <p>
+              <span className="text-slate-400">Review ID:</span> {review.id}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </AppShell>
+  );
+}

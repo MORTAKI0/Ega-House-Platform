@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 import { type SaveReviewFormState, saveReviewAction } from "./actions";
@@ -32,13 +33,12 @@ export function ReviewForm({ defaultWeekOf }: ReviewFormProps) {
         <label htmlFor="weekOf" className="text-sm font-medium text-slate-200">
           Week date
         </label>
-        <input
+        <Input
           id="weekOf"
           type="date"
           name="weekOf"
           required
           defaultValue={state.values.weekOf}
-          className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition focus:border-cyan-300/50 focus-visible:ring-4 focus-visible:ring-cyan-300/15"
         />
       </div>
 

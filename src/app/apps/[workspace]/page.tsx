@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 const WORKSPACE_REDIRECTS: Record<string, `/${string}`> = {
+  dashboard: "/dashboard",
   goals: "/goals",
   tasks: "/tasks",
   timer: "/timer",

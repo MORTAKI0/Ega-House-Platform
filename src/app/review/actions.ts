@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { getWeekBounds } from "@/lib/review-week";
 import { createClient } from "@/lib/supabase/server";
 
 export type SaveReviewFormState = {
@@ -12,32 +13,6 @@ export type SaveReviewFormState = {
     weekOf: string;
   };
 };
-
-function toIsoDate(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function getWeekBounds(weekOf: string) {
-  const parsed = new Date(`${weekOf}T00:00:00.000Z`);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  const day = parsed.getUTCDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-
-  const weekStart = new Date(parsed);
-  weekStart.setUTCDate(parsed.getUTCDate() + diffToMonday);
-
-  const weekEnd = new Date(weekStart);
-  weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
-
-  return {
-    weekStart: toIsoDate(weekStart),
-    weekEnd: toIsoDate(weekEnd),
-  };
-}
 
 function errorState(
   error: string,
