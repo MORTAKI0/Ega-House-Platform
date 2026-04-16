@@ -12,7 +12,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
-import { formatDurationLabel, getTaskTotalDurationMap } from "@/lib/task-session";
+import {
+  formatDurationLabel,
+  getCurrentDayWindow,
+  getSessionDurationWithinWindowSeconds,
+  getTaskSessionDurationSeconds,
+  getTaskTotalDurationMap,
+} from "@/lib/task-session";
 import { formatTimerDateTime } from "@/lib/timer-domain";
 
 import { resolveSessionConflictAction, startTimerAction } from "./actions";
@@ -32,6 +38,12 @@ function getTaskContextHref(taskId: string | null | undefined, projectSlug: stri
 
 async function getTimerData() {
   const supabase = await createClient();
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const todayWindow = getCurrentDayWindow(now);
+  const nextDayStartIso = new Date(
+    new Date(todayWindow.startIso).getTime() + 24 * 60 * 60 * 1000,
+  ).toISOString();
 
   const tasksPromise = supabase
     .from("tasks")
@@ -47,18 +59,29 @@ async function getTimerData() {
     .is("ended_at", null)
     .order("started_at", { ascending: false });
 
-  const recentSessionsPromise = supabase
+  const completedSessionsPromise = supabase
     .from("task_sessions")
-    .select("id, started_at, ended_at, duration_seconds, tasks(id, title, projects(name))")
+    .select(
+      "id, task_id, started_at, ended_at, duration_seconds, tasks(id, title, projects(name))",
+    )
     .not("ended_at", "is", null)
-    .order("ended_at", { ascending: false })
-    .limit(6);
+    .order("started_at", { ascending: false })
+    .limit(80);
 
-  const [tasksResult, openSessionsResult, recentSessionsResult] = await Promise.all([
-    tasksPromise,
-    openSessionsPromise,
-    recentSessionsPromise,
-  ]);
+  const todaySessionsPromise = supabase
+    .from("task_sessions")
+    .select("id, task_id, started_at, ended_at, duration_seconds, tasks(id, title)")
+    .lt("started_at", nextDayStartIso)
+    .or(`ended_at.gte.${todayWindow.startIso},ended_at.is.null`)
+    .order("started_at", { ascending: false });
+
+  const [tasksResult, openSessionsResult, completedSessionsResult, todaySessionsResult] =
+    await Promise.all([
+      tasksPromise,
+      openSessionsPromise,
+      completedSessionsPromise,
+      todaySessionsPromise,
+    ]);
 
   if (tasksResult.error) {
     throw new Error(`Failed to load tasks: ${tasksResult.error.message}`);
@@ -68,25 +91,105 @@ async function getTimerData() {
     throw new Error(`Failed to load open sessions: ${openSessionsResult.error.message}`);
   }
 
-  if (recentSessionsResult.error) {
+  if (completedSessionsResult.error) {
     throw new Error(
-      `Failed to load recent sessions: ${recentSessionsResult.error.message}`,
+      `Failed to load completed sessions: ${completedSessionsResult.error.message}`,
     );
+  }
+
+  if (todaySessionsResult.error) {
+    throw new Error(`Failed to load today's sessions: ${todaySessionsResult.error.message}`);
   }
 
   const taskIds = [
     ...tasksResult.data.map((task) => task.id),
     ...openSessionsResult.data.map((session) => session.task_id),
-    ...recentSessionsResult.data
+    ...completedSessionsResult.data
       .map((session) => session.tasks?.id)
       .filter((taskId): taskId is string => Boolean(taskId)),
+    ...todaySessionsResult.data.map((session) => session.task_id),
   ];
-  const taskTotalDurations = await getTaskTotalDurationMap(supabase, taskIds);
+  const taskTotalDurations = await getTaskTotalDurationMap(supabase, taskIds, nowIso);
+
+  const todayTaskDurationMap = todaySessionsResult.data.reduce<
+    Record<string, { taskTitle: string; durationSeconds: number }>
+  >((totals, session) => {
+    const durationSeconds = getSessionDurationWithinWindowSeconds(
+      session,
+      todayWindow,
+      nowIso,
+    );
+
+    if (durationSeconds <= 0) {
+      return totals;
+    }
+
+    const existing = totals[session.task_id];
+    totals[session.task_id] = {
+      taskTitle: existing?.taskTitle ?? session.tasks?.title ?? "Untitled task",
+      durationSeconds: (existing?.durationSeconds ?? 0) + durationSeconds,
+    };
+    return totals;
+  }, {});
+
+  const todayTaskBreakdown = Object.entries(todayTaskDurationMap)
+    .map(([taskId, details]) => ({
+      taskId,
+      taskTitle: details.taskTitle,
+      durationSeconds: details.durationSeconds,
+    }))
+    .sort((left, right) => right.durationSeconds - left.durationSeconds);
+  const todayTotalDurationSeconds = todayTaskBreakdown.reduce(
+    (sum, row) => sum + row.durationSeconds,
+    0,
+  );
+
+  const historyByTask = completedSessionsResult.data.reduce<
+    Record<
+      string,
+      {
+        taskId: string;
+        taskTitle: string;
+        projectName: string;
+        sessions: Array<{
+          id: string;
+          startedAt: string;
+          endedAt: string | null;
+          durationSeconds: number;
+        }>;
+      }
+    >
+  >((groups, session) => {
+    const existing = groups[session.task_id];
+    const bucket =
+      existing ??
+      {
+        taskId: session.task_id,
+        taskTitle: session.tasks?.title ?? "Untitled task",
+        projectName: session.tasks?.projects?.name ?? "Unknown project",
+        sessions: [],
+      };
+    bucket.sessions.push({
+      id: session.id,
+      startedAt: session.started_at,
+      endedAt: session.ended_at,
+      durationSeconds: getTaskSessionDurationSeconds(session, nowIso),
+    });
+    groups[session.task_id] = bucket;
+    return groups;
+  }, {});
+  const sessionHistoryByTask = Object.values(historyByTask).sort((left, right) => {
+    const leftStartedAt = left.sessions[0]?.startedAt ?? "";
+    const rightStartedAt = right.sessions[0]?.startedAt ?? "";
+    return new Date(rightStartedAt).getTime() - new Date(leftStartedAt).getTime();
+  });
 
   return {
     tasks: tasksResult.data,
     openSessions: openSessionsResult.data,
-    recentSessions: recentSessionsResult.data,
+    todayTaskBreakdown,
+    todayTotalDurationSeconds,
+    sessionHistoryByTask,
     taskTotalDurations,
   };
 }
@@ -108,7 +211,14 @@ function getActionErrorMessage(value: string | undefined) {
 export default async function TimerPage({ searchParams }: TimerPageProps) {
   const resolvedSearchParams = await searchParams;
   const actionError = getActionErrorMessage(resolvedSearchParams.actionError);
-  const { tasks, openSessions, recentSessions, taskTotalDurations } = await getTimerData();
+  const {
+    tasks,
+    openSessions,
+    todayTaskBreakdown,
+    todayTotalDurationSeconds,
+    sessionHistoryByTask,
+    taskTotalDurations,
+  } = await getTimerData();
   const activeSession = openSessions[0] ?? null;
   const recoveredExtraSessionCount = Math.max(0, openSessions.length - 1);
   const hasSessionConflict = recoveredExtraSessionCount > 0;
@@ -207,35 +317,37 @@ export default async function TimerPage({ searchParams }: TimerPageProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent sessions</CardTitle>
+            <CardTitle>Today summary</CardTitle>
             <CardDescription>
-              Last completed focus sessions with tracked durations.
+              Logged focus time for the current day, including open sessions.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {recentSessions.length === 0 ? (
+            <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-cyan-100/80">
+                Today total
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-cyan-50">
+                {formatDurationLabel(todayTotalDurationSeconds)}
+              </p>
+            </div>
+
+            {todayTaskBreakdown.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-5 text-sm leading-7 text-slate-400">
-                No completed sessions yet.
+                No focus sessions logged today.
               </p>
             ) : (
-              <div className="space-y-3">
-                {recentSessions.map((session) => (
+              <div className="mt-4 space-y-3">
+                {todayTaskBreakdown.map((row) => (
                   <div
-                    key={session.id}
+                    key={row.taskId}
                     className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3"
                   >
                     <p className="text-sm font-medium text-slate-100">
-                      {session.tasks?.title ?? "Untitled task"}
-                    </p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                      {session.tasks?.projects?.name ?? "Unknown project"}
+                      {row.taskTitle}
                     </p>
                     <p className="mt-2 text-xs text-slate-300">
-                      {session.ended_at ? formatTimerDateTime(session.ended_at) : "-"} ·{" "}
-                      {formatDurationLabel(session.duration_seconds ?? 0)}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-400">
-                      Total tracked {formatDurationLabel(taskTotalDurations[session.tasks?.id ?? ""] ?? 0)}
+                      {formatDurationLabel(row.durationSeconds)}
                     </p>
                   </div>
                 ))}
@@ -244,6 +356,62 @@ export default async function TimerPage({ searchParams }: TimerPageProps) {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Session history by task</CardTitle>
+          <CardDescription>
+            Prior completed work sessions grouped by task.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {sessionHistoryByTask.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-5 text-sm leading-7 text-slate-400">
+              No completed sessions yet.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {sessionHistoryByTask.map((taskHistory) => (
+                <section
+                  key={taskHistory.taskId}
+                  className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-4"
+                >
+                  <p className="text-sm font-medium text-slate-100">
+                    {taskHistory.taskTitle}
+                  </p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                    {taskHistory.projectName}
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {taskHistory.sessions.slice(0, 6).map((session) => (
+                      <div
+                        key={session.id}
+                        className="rounded-xl border border-white/8 bg-slate-950/30 px-3 py-2 text-xs text-slate-300"
+                      >
+                        <p>Started {formatTimerDateTime(session.startedAt)}</p>
+                        <p>
+                          Ended{" "}
+                          {session.endedAt ? formatTimerDateTime(session.endedAt) : "-"}
+                        </p>
+                        <p>Duration {formatDurationLabel(session.durationSeconds)}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {taskHistory.sessions.length > 6 ? (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Showing latest 6 of {taskHistory.sessions.length} sessions.
+                    </p>
+                  ) : null}
+                  <p className="mt-2 text-xs text-slate-400">
+                    Total tracked{" "}
+                    {formatDurationLabel(taskTotalDurations[taskHistory.taskId] ?? 0)}
+                  </p>
+                </section>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </AppShell>
   );
 }

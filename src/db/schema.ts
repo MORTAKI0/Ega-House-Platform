@@ -7,6 +7,7 @@ export const projects = pgTable(
     name: varchar("name", { length: 256 }).notNull(),
     slug: varchar("slug", { length: 256 }).notNull(),
     description: text("description"),
+    status: varchar("status", { length: 64 }).notNull().default("planned"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

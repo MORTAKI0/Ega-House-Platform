@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { updateProjectStatusAction } from "@/app/tasks/projects/actions";
 import { updateTaskInlineAction } from "@/app/tasks/actions";
+import { InlineProjectStatusForm } from "@/components/projects/inline-project-status-form";
 import { CreateTaskForm } from "@/app/tasks/create-task-form";
 import { InlineTaskUpdateForm } from "@/components/tasks/inline-task-update-form";
 import {
@@ -29,7 +31,10 @@ import {
 } from "@/lib/task-domain";
 import type { Tables } from "@/lib/supabase/database.types";
 
-type ProjectRow = Pick<Tables<"projects">, "id" | "name" | "slug" | "description">;
+type ProjectRow = Pick<
+  Tables<"projects">,
+  "id" | "name" | "slug" | "description" | "status"
+>;
 type GoalRow = Pick<Tables<"goals">, "id" | "title" | "project_id">;
 type TaskRow = Pick<
   Tables<"tasks">,
@@ -45,6 +50,8 @@ type ProjectDetailPageProps = {
     priority?: string;
     taskUpdateError?: string;
     taskUpdateTaskId?: string;
+    projectUpdateError?: string;
+    projectUpdateProjectId?: string;
   }>;
 };
 
@@ -53,7 +60,7 @@ async function getProjectDetail(slug: string) {
 
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("id, name, slug, description")
+    .select("id, name, slug, description, status")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -145,6 +152,8 @@ export default async function ProjectDetailPage({
       : null;
   const taskUpdateError = resolvedSearchParams.taskUpdateError?.slice(0, 180) ?? null;
   const taskUpdateTaskId = resolvedSearchParams.taskUpdateTaskId ?? null;
+  const projectUpdateError = resolvedSearchParams.projectUpdateError?.slice(0, 180) ?? null;
+  const projectUpdateProjectId = resolvedSearchParams.projectUpdateProjectId ?? null;
 
   const { project, goals, tasks, statusCounts, taskTotalDurations } = projectDetail;
   const returnTo = buildTaskFilterReturnPath(`/tasks/projects/${project.slug}`, {
@@ -197,16 +206,28 @@ export default async function ProjectDetailPage({
                   Everything here is already scoped to {project.name}.
                 </CardDescription>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {statusCounts.length ? (
-                  statusCounts.map((entry) => (
-                    <Badge key={entry.status} tone={getTaskStatusTone(entry.status)}>
-                      {entry.count} {formatTaskToken(entry.status)}
-                    </Badge>
-                  ))
-                ) : (
-                  <Badge>No task activity yet</Badge>
-                )}
+              <div className="space-y-3">
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Badge tone={getTaskStatusTone(project.status)}>
+                    Project {formatTaskToken(project.status)}
+                  </Badge>
+                  {statusCounts.length ? (
+                    statusCounts.map((entry) => (
+                      <Badge key={entry.status} tone={getTaskStatusTone(entry.status)}>
+                        {entry.count} {formatTaskToken(entry.status)}
+                      </Badge>
+                    ))
+                  ) : (
+                    <Badge>No task activity yet</Badge>
+                  )}
+                </div>
+                <InlineProjectStatusForm
+                  action={updateProjectStatusAction}
+                  projectId={project.id}
+                  returnTo={returnTo}
+                  defaultStatus={project.status}
+                  error={projectUpdateProjectId === project.id ? projectUpdateError : null}
+                />
               </div>
             </div>
 

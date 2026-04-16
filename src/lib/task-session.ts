@@ -8,6 +8,11 @@ type TaskSessionDurationRow = Pick<
   "task_id" | "started_at" | "ended_at" | "duration_seconds"
 >;
 
+type SessionWindow = {
+  startIso: string;
+  endIso: string;
+};
+
 function getDurationFromDates(startedAt: string, endedAt: string) {
   return Math.max(
     0,
@@ -15,6 +20,11 @@ function getDurationFromDates(startedAt: string, endedAt: string) {
       (new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000,
     ),
   );
+}
+
+function toMs(iso: string) {
+  const value = new Date(iso).getTime();
+  return Number.isFinite(value) ? value : null;
 }
 
 export function getTaskSessionDurationSeconds(
@@ -27,6 +37,45 @@ export function getTaskSessionDurationSeconds(
 
   const endTime = session.ended_at ?? nowIso;
   return getDurationFromDates(session.started_at, endTime);
+}
+
+export function getCurrentDayWindow(now = new Date()): SessionWindow {
+  const dayStart = new Date(now);
+  dayStart.setHours(0, 0, 0, 0);
+
+  return {
+    startIso: dayStart.toISOString(),
+    endIso: now.toISOString(),
+  };
+}
+
+export function getSessionDurationWithinWindowSeconds(
+  session: TaskSessionDurationRow,
+  window: SessionWindow,
+  nowIso = new Date().toISOString(),
+) {
+  const sessionStartMs = toMs(session.started_at);
+  const sessionEndMs = toMs(session.ended_at ?? nowIso);
+  const windowStartMs = toMs(window.startIso);
+  const windowEndMs = toMs(window.endIso);
+
+  if (
+    sessionStartMs === null ||
+    sessionEndMs === null ||
+    windowStartMs === null ||
+    windowEndMs === null
+  ) {
+    return 0;
+  }
+
+  const overlapStart = Math.max(sessionStartMs, windowStartMs);
+  const overlapEnd = Math.min(sessionEndMs, windowEndMs);
+
+  if (overlapEnd <= overlapStart) {
+    return 0;
+  }
+
+  return Math.floor((overlapEnd - overlapStart) / 1000);
 }
 
 export async function getTaskTotalDurationMap(

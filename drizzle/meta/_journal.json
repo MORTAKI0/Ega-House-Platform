@@ -43,6 +43,13 @@
       "when": 1776176634772,
       "tag": "0005_enable_rls_and_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776331620000,
+      "tag": "0006_add_project_status",
+      "breakpoints": true
     }
   ]
 }

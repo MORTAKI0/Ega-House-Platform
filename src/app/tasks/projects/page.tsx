@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { updateProjectStatusAction } from "@/app/tasks/projects/actions";
+import { InlineProjectStatusForm } from "@/components/projects/inline-project-status-form";
 import { TasksWorkspaceShell } from "@/components/tasks/tasks-workspace-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,11 +14,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
+import { formatTaskToken, getTaskStatusTone } from "@/lib/task-domain";
 import type { Tables } from "@/lib/supabase/database.types";
 
 type ProjectRow = Pick<
   Tables<"projects">,
-  "id" | "name" | "slug" | "description" | "created_at" | "updated_at"
+  "id" | "name" | "slug" | "description" | "status" | "created_at" | "updated_at"
 >;
 
 type TaskRow = Pick<
@@ -48,21 +51,7 @@ function formatPriorityLabel(priority: string) {
 }
 
 function getStatusTone(status: string) {
-  const normalized = status.toLowerCase();
-
-  if (["done", "complete", "completed"].includes(normalized)) {
-    return "success" as const;
-  }
-
-  if (["blocked", "cancelled", "canceled"].includes(normalized)) {
-    return "danger" as const;
-  }
-
-  if (["in progress", "in_progress", "active"].includes(normalized)) {
-    return "accent" as const;
-  }
-
-  return "neutral" as const;
+  return getTaskStatusTone(status);
 }
 
 async function getProjectsWithTaskContext() {
@@ -70,7 +59,7 @@ async function getProjectsWithTaskContext() {
 
   const { data: projects, error: projectsError } = await supabase
     .from("projects")
-    .select("id, name, slug, description, created_at, updated_at")
+    .select("id, name, slug, description, status, created_at, updated_at")
     .order("updated_at", { ascending: false });
 
   if (projectsError) {
@@ -150,9 +139,17 @@ function EmptyState() {
   );
 }
 
-function ProjectCard({ project }: { project: ProjectCardData }) {
+function ProjectCard({
+  project,
+  returnTo,
+  inlineError,
+}: {
+  project: ProjectCardData;
+  returnTo: string;
+  inlineError?: string | null;
+}) {
   return (
-    <Card className="h-full">
+    <Card id={`project-${project.id}`} className="h-full scroll-mt-24">
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
@@ -168,9 +165,14 @@ function ProjectCard({ project }: { project: ProjectCardData }) {
               {project.slug}
             </CardDescription>
           </div>
-          <Badge tone={project.taskCount > 0 ? "accent" : "neutral"}>
-            {project.taskCount} {project.taskCount === 1 ? "Task" : "Tasks"}
-          </Badge>
+          <div className="flex flex-wrap gap-2">
+            <Badge tone={getStatusTone(project.status)}>
+              {formatTaskToken(project.status)}
+            </Badge>
+            <Badge tone={project.taskCount > 0 ? "accent" : "neutral"}>
+              {project.taskCount} {project.taskCount === 1 ? "Task" : "Tasks"}
+            </Badge>
+          </div>
         </div>
         <CardDescription>
           {project.description?.trim() || "No project description added yet."}
@@ -178,6 +180,19 @@ function ProjectCard({ project }: { project: ProjectCardData }) {
       </CardHeader>
 
       <CardContent className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <p className="pt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+            Update project status inline.
+          </p>
+          <InlineProjectStatusForm
+            action={updateProjectStatusAction}
+            projectId={project.id}
+            returnTo={returnTo}
+            defaultStatus={project.status}
+            error={inlineError}
+          />
+        </div>
+
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
             Project detail
@@ -241,7 +256,17 @@ function ProjectCard({ project }: { project: ProjectCardData }) {
   );
 }
 
-export default async function TasksProjectsPage() {
+type TasksProjectsPageProps = {
+  searchParams: Promise<{
+    projectUpdateError?: string;
+    projectUpdateProjectId?: string;
+  }>;
+};
+
+export default async function TasksProjectsPage({ searchParams }: TasksProjectsPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const projectUpdateError = resolvedSearchParams.projectUpdateError?.slice(0, 180) ?? null;
+  const projectUpdateProjectId = resolvedSearchParams.projectUpdateProjectId ?? null;
   const projects = await getProjectsWithTaskContext();
 
   return (
@@ -265,7 +290,14 @@ export default async function TasksProjectsPage() {
       {projects.length ? (
         <div className="grid gap-6 lg:grid-cols-2">
           {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard
+              key={project.id}
+              project={project}
+              returnTo="/tasks/projects"
+              inlineError={
+                projectUpdateProjectId === project.id ? projectUpdateError : null
+              }
+            />
           ))}
         </div>
       ) : (

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { GOAL_STATUS_VALUES, isGoalStatus } from "@/lib/task-domain";
@@ -30,6 +31,26 @@ function createErrorState(
   values: CreateGoalFormState["values"],
 ): CreateGoalFormState {
   return { error: message, values };
+}
+
+function getGoalsReturnPath(rawReturnTo: unknown) {
+  const returnTo = String(rawReturnTo ?? "").trim();
+  return returnTo.startsWith("/goals") ? returnTo : "/goals";
+}
+
+function redirectWithGoalsError(
+  returnPath: string,
+  errorMessage: string,
+  goalId?: string,
+): never {
+  const target = new URL(returnPath, "https://egawilldoit.online");
+  target.searchParams.set("goalUpdateError", errorMessage);
+
+  if (goalId) {
+    target.searchParams.set("goalUpdateGoalId", goalId);
+  }
+
+  redirect(`${target.pathname}${target.search}${goalId ? `#goal-${goalId}` : ""}`);
 }
 
 export async function createGoalAction(
@@ -95,4 +116,32 @@ export async function createGoalAction(
       slug: "",
     },
   };
+}
+
+export async function updateGoalStatusAction(formData: FormData) {
+  const returnPath = getGoalsReturnPath(formData.get("returnTo"));
+  const goalId = String(formData.get("goalId") ?? "").trim();
+  const status = String(formData.get("status") ?? "").trim();
+
+  if (!goalId || !isGoalStatus(status)) {
+    redirectWithGoalsError(returnPath, "Goal update request is invalid.", goalId);
+  }
+
+  const updatedAt = new Date().toISOString();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("goals")
+    .update({
+      status,
+      updated_at: updatedAt,
+    })
+    .eq("id", goalId);
+
+  if (error) {
+    redirectWithGoalsError(returnPath, "Unable to update goal right now.", goalId);
+  }
+
+  revalidatePath("/goals");
+  revalidatePath("/tasks/projects");
+  redirect(`${returnPath}#goal-${goalId}`);
 }

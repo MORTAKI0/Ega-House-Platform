@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { InlineGoalStatusForm } from "@/components/goals/inline-goal-status-form";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -12,11 +13,19 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { formatTaskToken, getTaskStatusTone } from "@/lib/task-domain";
 
+import { updateGoalStatusAction } from "./actions";
 import { CreateGoalForm } from "./create-goal-form";
 
 export const metadata: Metadata = {
   title: "Goals | EGA House",
   description: "Goals list and creation flow.",
+};
+
+type GoalsPageProps = {
+  searchParams: Promise<{
+    goalUpdateError?: string;
+    goalUpdateGoalId?: string;
+  }>;
 };
 
 async function getGoalsData() {
@@ -47,7 +56,10 @@ async function getGoalsData() {
   };
 }
 
-export default async function GoalsPage() {
+export default async function GoalsPage({ searchParams }: GoalsPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const goalUpdateError = resolvedSearchParams.goalUpdateError?.slice(0, 180) ?? null;
+  const goalUpdateGoalId = resolvedSearchParams.goalUpdateGoalId ?? null;
   const { projects, goals } = await getGoalsData();
 
   return (
@@ -80,8 +92,9 @@ export default async function GoalsPage() {
               <div className="space-y-3">
                 {goals.map((goal) => (
                   <article
+                    id={`goal-${goal.id}`}
                     key={goal.id}
-                    className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-4"
+                    className="scroll-mt-24 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-4"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <h3 className="text-base font-medium text-slate-100">{goal.title}</h3>
@@ -97,6 +110,18 @@ export default async function GoalsPage() {
                         {goal.description}
                       </p>
                     ) : null}
+                    <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+                      <p className="pt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                        Update goal status inline.
+                      </p>
+                      <InlineGoalStatusForm
+                        action={updateGoalStatusAction}
+                        goalId={goal.id}
+                        returnTo="/goals"
+                        defaultStatus={goal.status}
+                        error={goalUpdateGoalId === goal.id ? goalUpdateError : null}
+                      />
+                    </div>
                   </article>
                 ))}
               </div>
