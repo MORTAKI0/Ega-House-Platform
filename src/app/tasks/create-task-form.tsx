@@ -51,7 +51,7 @@ export function CreateTaskForm({
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="returnTo" value={state.values.returnTo} />
       <div className="space-y-2">
-        <label htmlFor="title" className="text-sm font-medium text-slate-200">
+        <label htmlFor="title" className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider">
           Title
         </label>
         <Input
@@ -67,14 +67,14 @@ export function CreateTaskForm({
         <div className="space-y-2">
           <label
             htmlFor="projectId"
-            className="text-sm font-medium text-slate-200"
+            className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider"
           >
             Project
           </label>
           {isProjectScoped ? (
             <>
               <input type="hidden" name="projectId" value={state.values.projectId} />
-              <div className="flex min-h-12 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm text-slate-100">
+              <div className="flex h-9 items-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3.5 text-sm text-slate-100">
                 {projects.find((project) => project.id === state.values.projectId)?.name ??
                   "Selected project"}
               </div>
@@ -85,7 +85,7 @@ export function CreateTaskForm({
               name="projectId"
               defaultValue={state.values.projectId}
               required
-              className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition focus:border-cyan-300/50 focus-visible:ring-4 focus-visible:ring-cyan-300/15"
+              className="h-9 w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-input)] px-3.5 text-sm text-white outline-none transition hover:border-[var(--border-strong)] focus:border-[var(--accent-green-border)] focus:ring-2 focus:ring-[var(--accent-green)] focus:ring-opacity-15"
             >
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -97,14 +97,14 @@ export function CreateTaskForm({
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="goalId" className="text-sm font-medium text-slate-200">
+          <label htmlFor="goalId" className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider">
             Goal (optional)
           </label>
           <select
             id="goalId"
             name="goalId"
             defaultValue={state.values.goalId}
-            className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition focus:border-cyan-300/50 focus-visible:ring-4 focus-visible:ring-cyan-300/15"
+            className="h-9 w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-input)] px-3.5 text-sm text-white outline-none transition hover:border-[var(--border-strong)] focus:border-[var(--accent-green-border)] focus:ring-2 focus:ring-[var(--accent-green)] focus:ring-opacity-15"
           >
             <option value="">No goal</option>
             {goals.map((goal) => (
@@ -118,14 +118,14 @@ export function CreateTaskForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <label htmlFor="status" className="text-sm font-medium text-slate-200">
+          <label htmlFor="status" className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider">
             Initial status
           </label>
           <select
             id="status"
             name="status"
             defaultValue={state.values.status}
-            className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition focus:border-cyan-300/50 focus-visible:ring-4 focus-visible:ring-cyan-300/15"
+            className="h-9 w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-input)] px-3.5 text-sm text-white outline-none transition hover:border-[var(--border-strong)] focus:border-[var(--accent-green-border)] focus:ring-2 focus:ring-[var(--accent-green)] focus:ring-opacity-15"
           >
             {TASK_STATUS_VALUES.map((status) => (
               <option key={status} value={status}>
@@ -138,7 +138,7 @@ export function CreateTaskForm({
         <div className="space-y-2">
           <label
             htmlFor="priority"
-            className="text-sm font-medium text-slate-200"
+            className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider"
           >
             Priority
           </label>
@@ -146,7 +146,7 @@ export function CreateTaskForm({
             id="priority"
             name="priority"
             defaultValue={state.values.priority}
-            className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition focus:border-cyan-300/50 focus-visible:ring-4 focus-visible:ring-cyan-300/15"
+            className="h-9 w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-input)] px-3.5 text-sm text-white outline-none transition hover:border-[var(--border-strong)] focus:border-[var(--accent-green-border)] focus:ring-2 focus:ring-[var(--accent-green)] focus:ring-opacity-15"
           >
             {TASK_PRIORITY_VALUES.map((priority) => (
               <option key={priority} value={priority}>
@@ -160,7 +160,7 @@ export function CreateTaskForm({
       <div className="space-y-2">
         <label
           htmlFor="description"
-          className="text-sm font-medium text-slate-200"
+          className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider"
         >
           Description (optional)
         </label>
@@ -173,12 +173,12 @@ export function CreateTaskForm({
       </div>
 
       {state.error ? (
-        <p
+        <div
           role="alert"
-          className="rounded-2xl border border-rose-400/35 bg-rose-400/10 px-4 py-3 text-sm leading-7 text-rose-100"
+          className="rounded-xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-xs leading-relaxed text-rose-300"
         >
           {state.error}
-        </p>
+        </div>
       ) : null}
 
       <Button type="submit" disabled={isPending || projects.length === 0}>

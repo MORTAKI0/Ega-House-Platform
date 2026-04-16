@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import {
   formatDateTime,
   formatIsoDate,
@@ -166,16 +166,26 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
       eyebrow="Review Workspace"
       title="Weekly Review"
       description="Capture written reflection, inspect weekly stats, and review prior snapshots."
-      navigation={
-        <>
-          <Badge tone="accent">Review</Badge>
-          <Badge>Weekly Metrics</Badge>
-          <Badge>Supabase Live</Badge>
-        </>
-      }
     >
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="space-y-6">
+      {/* Week stats summary row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <StatCard label="Tasks created" value={weeklyStats.tasksCreated} variant="default" />
+        <StatCard label="Sessions logged" value={weeklyStats.sessionsLogged} variant="default" />
+        <StatCard
+          label="Goals touched"
+          value={weeklyStats.goalsTouched}
+          variant="muted"
+        />
+        <StatCard
+          label="Focus time"
+          value={`${Math.round(weeklyStats.trackedSeconds / 60)}m`}
+          variant="green"
+        />
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-5">
+          {/* Reflection */}
           <Card>
             <CardHeader>
               <CardTitle>Reflection</CardTitle>
@@ -183,7 +193,7 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
                 Select a week, review existing context, and save a weekly reflection.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className="space-y-4">
               <WeekSelector
                 selectedWeekOf={selectedWeekOf}
                 weekStart={bounds.weekStart}
@@ -194,25 +204,25 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
               />
 
               {selectedWeekReviews.length > 0 ? (
-                <div className="space-y-3 rounded-2xl border border-white/8 bg-white/[0.02] p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                <div className="space-y-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-faint)]">
                     Saved in this week
                   </p>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {selectedWeekReviews.slice(0, 2).map((review) => (
-                      <article key={review.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                        <p className="text-sm leading-7 text-slate-200">
+                      <article key={review.id} className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card-muted)] p-3">
+                        <p className="text-xs leading-relaxed text-[var(--color-ink-muted)]">
                           {toSummaryPreview(review.summary, 160)}
                         </p>
-                        <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-400">
-                          <span>
+                        <div className="mt-2 flex items-center justify-between gap-3">
+                          <span className="text-[11px] text-[var(--color-ink-faint)]">
                             Saved {formatDateTime(review.updated_at ?? review.created_at)}
                           </span>
                           <Link
                             href={`/review/${review.id}`}
-                            className="font-medium text-cyan-100 transition hover:text-cyan-200"
+                            className="text-[11px] font-semibold text-[var(--accent-green)] transition hover:text-[var(--accent-green-strong)]"
                           >
-                            Open
+                            Open →
                           </Link>
                         </div>
                       </article>
@@ -225,6 +235,7 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
             </CardContent>
           </Card>
 
+          {/* Weekly stats detail */}
           <Card>
             <CardHeader>
               <CardTitle>Weekly stats</CardTitle>
@@ -239,6 +250,7 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
           </Card>
         </div>
 
+        {/* Past reviews */}
         <Card>
           <CardHeader>
             <CardTitle>Past reviews</CardTitle>
@@ -246,29 +258,31 @@ export default async function ReviewPage({ searchParams }: ReviewPageProps) {
           </CardHeader>
           <CardContent>
             {pastReviews.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-5 text-sm leading-7 text-slate-400">
-                No reviews saved yet.
-              </p>
+              <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.015] px-4 py-8 text-center">
+                <p className="text-xs text-[var(--color-ink-soft)]">No reviews saved yet.</p>
+              </div>
             ) : (
-              <div className="max-h-[54rem] space-y-3 overflow-y-auto pr-1">
+              <div className="max-h-[48rem] space-y-2 overflow-y-auto pr-1">
                 {pastReviews.map((review) => (
                   <article
                     key={review.id}
-                    className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3"
+                    className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card-muted)] px-4 py-3.5 hover:border-[var(--border-default)] hover:bg-[var(--surface-2)] transition-all duration-150"
                   >
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                      {formatIsoDate(review.week_start)} to {formatIsoDate(review.week_end)}
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--color-ink-faint)]">
+                      {formatIsoDate(review.week_start)} — {formatIsoDate(review.week_end)}
                     </p>
-                    <p className="mt-2 text-sm leading-7 text-slate-200">
+                    <p className="mt-1.5 text-xs leading-relaxed text-[var(--color-ink-muted)]">
                       {toSummaryPreview(review.summary)}
                     </p>
-                    <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-400">
-                      <span>Saved {formatDateTime(review.updated_at ?? review.created_at)}</span>
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <span className="text-[11px] text-[var(--color-ink-faint)]">
+                        {formatDateTime(review.updated_at ?? review.created_at)}
+                      </span>
                       <Link
                         href={`/review/${review.id}`}
-                        className="font-medium text-cyan-100 transition hover:text-cyan-200"
+                        className="text-[11px] font-semibold text-[var(--accent-green)] transition hover:text-[var(--accent-green-strong)]"
                       >
-                        View detail
+                        View detail →
                       </Link>
                     </div>
                   </article>

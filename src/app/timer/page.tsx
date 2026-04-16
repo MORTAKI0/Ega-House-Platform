@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { ActiveTimerDisplay } from "@/components/timer/active-timer-display";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { createClient } from "@/lib/supabase/server";
 import {
   formatDurationLabel,
@@ -232,33 +232,34 @@ export default async function TimerPage({ searchParams }: TimerPageProps) {
       eyebrow="Timer Workspace"
       title="Focus Timer"
       description="Run single-task focus sessions and preserve recovery state if a session is already open on page load."
-      navigation={
-        <>
-          <Badge tone="accent">Timer</Badge>
-          <Badge>Single Active Session</Badge>
-          <Badge>Recovery Enabled</Badge>
-        </>
-      }
     >
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+        {/* Current session */}
         <Card>
           <CardHeader>
-            <CardTitle>Current session</CardTitle>
-            <CardDescription>
-              {activeSession
-                ? "Recovered active session state from the database."
-                : "No open session is currently running."}
-            </CardDescription>
+            <div className="flex items-center gap-2.5">
+              {activeSession && (
+                <div className="status-dot-active w-2.5 h-2.5 rounded-full flex-shrink-0" />
+              )}
+              <div>
+                <CardTitle>Current session</CardTitle>
+                <CardDescription>
+                  {activeSession
+                    ? "Recovered active session state from the database."
+                    : "No open session is currently running."}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {actionError ? (
-              <p className="rounded-2xl border border-rose-400/35 bg-rose-400/10 px-4 py-3 text-sm leading-7 text-rose-100">
+              <div className="rounded-xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-xs leading-relaxed text-rose-300">
                 {actionError}
-              </p>
+              </div>
             ) : null}
 
             {recoveredExtraSessionCount > 0 ? (
-              <div className="space-y-3 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-4 text-sm leading-7 text-amber-100">
+              <div className="space-y-3 rounded-xl border border-amber-400/20 bg-amber-400/8 px-4 py-4 text-xs leading-relaxed text-amber-200">
                 <p>
                   Detected {recoveredExtraSessionCount} extra open session
                   {recoveredExtraSessionCount > 1 ? "s" : ""}. Timer controls are
@@ -266,7 +267,7 @@ export default async function TimerPage({ searchParams }: TimerPageProps) {
                 </p>
                 <form action={resolveSessionConflictAction}>
                   <input type="hidden" name="returnTo" value="/timer" />
-                  <Button type="submit" variant="secondary">
+                  <Button type="submit" variant="secondary" size="sm">
                     Resolve session conflict
                   </Button>
                 </form>
@@ -285,12 +286,12 @@ export default async function TimerPage({ searchParams }: TimerPageProps) {
             ) : (
               <form action={startTimerAction} className="space-y-4">
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium text-slate-200">Task</span>
+                  <span className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider">Task</span>
                   <select
                     name="taskId"
                     required
                     disabled={tasks.length === 0}
-                    className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition focus:border-cyan-300/50 focus-visible:ring-4 focus-visible:ring-cyan-300/15"
+                    className="h-9 w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-input)] px-3.5 text-sm text-white transition-all duration-150 hover:border-[var(--border-strong)] focus:outline-none focus:border-[var(--accent-green-border)] focus:ring-2 focus:ring-[var(--accent-green)] focus:ring-opacity-15 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {tasks.length === 0 ? (
                       <option value="">No tasks available</option>
@@ -307,6 +308,7 @@ export default async function TimerPage({ searchParams }: TimerPageProps) {
                 <Button
                   type="submit"
                   disabled={tasks.length === 0 || hasSessionConflict}
+                  size="md"
                 >
                   Start timer
                 </Button>
@@ -315,97 +317,91 @@ export default async function TimerPage({ searchParams }: TimerPageProps) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Today summary</CardTitle>
-            <CardDescription>
-              Logged focus time for the current day, including open sessions.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-cyan-100/80">
-                Today total
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-cyan-50">
-                {formatDurationLabel(todayTotalDurationSeconds)}
-              </p>
-            </div>
+        {/* Today summary */}
+        <div className="space-y-4">
+          <StatCard
+            label="Today total"
+            value={formatDurationLabel(todayTotalDurationSeconds)}
+            subtitle="Focus time logged today including open sessions"
+            variant="green"
+          />
 
-            {todayTaskBreakdown.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-5 text-sm leading-7 text-slate-400">
-                No focus sessions logged today.
-              </p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {todayTaskBreakdown.map((row) => (
-                  <div
-                    key={row.taskId}
-                    className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3"
-                  >
-                    <p className="text-sm font-medium text-slate-100">
-                      {row.taskTitle}
-                    </p>
-                    <p className="mt-2 text-xs text-slate-300">
-                      {formatDurationLabel(row.durationSeconds)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {todayTaskBreakdown.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.015] px-4 py-5 text-center">
+              <p className="text-xs text-[var(--color-ink-soft)]">No focus sessions logged today.</p>
+            </div>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Today summary</CardTitle>
+                <CardDescription>Logged focus time for the current day.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {todayTaskBreakdown.map((row) => (
+                    <div
+                      key={row.taskId}
+                      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card-muted)] px-3.5 py-3 flex items-center justify-between gap-3"
+                    >
+                      <p className="text-xs font-medium text-white truncate">{row.taskTitle}</p>
+                      <p className="text-xs text-[var(--color-ink-soft)] flex-shrink-0">
+                        {formatDurationLabel(row.durationSeconds)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
 
-      <Card className="mt-6">
+      {/* Session history */}
+      <Card className="mt-5">
         <CardHeader>
           <CardTitle>Session history by task</CardTitle>
-          <CardDescription>
-            Prior completed work sessions grouped by task.
-          </CardDescription>
+          <CardDescription>Prior completed work sessions grouped by task.</CardDescription>
         </CardHeader>
         <CardContent>
           {sessionHistoryByTask.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-5 text-sm leading-7 text-slate-400">
-              No completed sessions yet.
-            </p>
+            <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.015] px-4 py-8 text-center">
+              <p className="text-sm text-[var(--color-ink-soft)]">No completed sessions yet.</p>
+            </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {sessionHistoryByTask.map((taskHistory) => (
                 <section
                   key={taskHistory.taskId}
-                  className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-4"
+                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card-muted)] px-4 py-4"
                 >
-                  <p className="text-sm font-medium text-slate-100">
-                    {taskHistory.taskTitle}
-                  </p>
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                    {taskHistory.projectName}
-                  </p>
-                  <div className="mt-3 space-y-2">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>
+                        {taskHistory.taskTitle}
+                      </p>
+                      <p className="text-xs text-[var(--color-ink-soft)] mt-0.5">{taskHistory.projectName}</p>
+                    </div>
+                    <p className="text-xs text-[var(--color-ink-muted)] flex-shrink-0">
+                      Total: {formatDurationLabel(taskTotalDurations[taskHistory.taskId] ?? 0)}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
                     {taskHistory.sessions.slice(0, 6).map((session) => (
                       <div
                         key={session.id}
-                        className="rounded-xl border border-white/8 bg-slate-950/30 px-3 py-2 text-xs text-slate-300"
+                        className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-2 text-[11px] text-[var(--color-ink-muted)] flex flex-wrap gap-x-4 gap-y-1"
                       >
-                        <p>Started {formatTimerDateTime(session.startedAt)}</p>
-                        <p>
-                          Ended{" "}
-                          {session.endedAt ? formatTimerDateTime(session.endedAt) : "-"}
-                        </p>
-                        <p>Duration {formatDurationLabel(session.durationSeconds)}</p>
+                        <span>Started {formatTimerDateTime(session.startedAt)}</span>
+                        <span>Ended {session.endedAt ? formatTimerDateTime(session.endedAt) : "—"}</span>
+                        <span className="text-[var(--accent-green)] font-medium">{formatDurationLabel(session.durationSeconds)}</span>
                       </div>
                     ))}
+                    {taskHistory.sessions.length > 6 ? (
+                      <p className="text-[11px] text-[var(--color-ink-faint)] pt-1">
+                        Showing latest 6 of {taskHistory.sessions.length} sessions.
+                      </p>
+                    ) : null}
                   </div>
-                  {taskHistory.sessions.length > 6 ? (
-                    <p className="mt-2 text-xs text-slate-500">
-                      Showing latest 6 of {taskHistory.sessions.length} sessions.
-                    </p>
-                  ) : null}
-                  <p className="mt-2 text-xs text-slate-400">
-                    Total tracked{" "}
-                    {formatDurationLabel(taskTotalDurations[taskHistory.taskId] ?? 0)}
-                  </p>
                 </section>
               ))}
             </div>

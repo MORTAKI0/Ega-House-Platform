@@ -1,15 +1,14 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-
 import { AppShell } from "@/components/layout/app-shell";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function Home() {
@@ -24,92 +23,75 @@ export default async function Home() {
 
   return (
     <AppShell
-      eyebrow="Shared Foundation"
       title="EGA House"
-      description="The visual system, app shell, and shared primitives are now in place for the goals, tasks, timer, and review surfaces."
+      description="Shared operational surface connecting tasks, goals, timer, and weekly reviews."
       actions={
-        <>
-          <Button className="min-w-36">Explore foundation</Button>
-          <Button variant="secondary" className="min-w-36">
-            Review auth flow
-          </Button>
-        </>
-      }
-      navigation={
-        <>
-          <Badge tone="accent">Goals</Badge>
-          <Badge>Tasks</Badge>
-          <Badge>Timer</Badge>
-          <Badge>Review</Badge>
-        </>
+        <Link
+          href="/login"
+          className="inline-flex h-9 items-center justify-center rounded-xl border border-[var(--accent-green-border)] bg-[var(--accent-green)] px-5 text-sm font-semibold text-[#064e3b] transition hover:bg-[var(--accent-green-strong)] active:scale-[0.98]"
+        >
+          Sign in to get started →
+        </Link>
       }
     >
-      <div className="grid gap-6 lg:grid-cols-[1.25fr_0.95fr]">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+        <StatCard label="Surfaces" value="5" subtitle="Task, Goal, Timer, Review, Dashboard" />
+        <StatCard label="Design" value="v1" subtitle="Premium dark sidebar interface" variant="green" />
+        <StatCard label="Database" value="Live" subtitle="Supabase realtime backend" variant="cyan" />
+        <StatCard label="Stack" value="Next 15" subtitle="React 19 + Tailwind v4" variant="muted" />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1.25fr_0.95fr]">
         <Card>
           <CardHeader>
-            <Badge tone="accent" className="w-fit">
-              Token Layer
-            </Badge>
             <CardTitle>Shared design language</CardTitle>
             <CardDescription>
-              Dark surfaces, cyan accents, rounded framing, and calm editorial
-              spacing copied forward from the old operational dashboard and
-              normalized for this repo.
+              Dark sidebar, emerald accents, display typography, and calm editorial spacing
+              across all workspace surfaces.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">
-                Surfaces
-              </p>
-              <p className="mt-2 text-sm leading-7 text-slate-300">
-                Shell, panel, and muted card tones are aligned for future app
-                pages.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">
-                Typography
-              </p>
-              <p className="mt-2 text-sm leading-7 text-slate-300">
-                Sans and mono stacks are defined globally without pulling in a
-                separate page-level font system.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">
-                Primitives
-              </p>
-              <p className="mt-2 text-sm leading-7 text-slate-300">
-                Buttons, inputs, badges, cards, and the shell are ready for the
-                next pages.
-              </p>
-            </div>
+          <CardContent className="grid gap-3 sm:grid-cols-3">
+            {[
+              { label: "Surfaces", desc: "Shell, panel, and muted card tones aligned across all pages." },
+              { label: "Typography", desc: "Plus Jakarta Sans display + DM Sans body stack." },
+              { label: "Primitives", desc: "Buttons, inputs, badges, cards, and stat widgets." },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card-muted)] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-faint)] mb-2">
+                  {item.label}
+                </p>
+                <p className="text-xs leading-relaxed text-[var(--color-ink-muted)]">{item.desc}</p>
+              </div>
+            ))}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <Badge tone="success" className="w-fit">
-              Next Build Step
-            </Badge>
-            <CardTitle>App pages can plug in directly</CardTitle>
+            <CardTitle>App pages</CardTitle>
             <CardDescription>
-              The next shared pages can focus on data and workflow instead of
-              rebuilding layout and styling.
+              Each workspace surface focuses on data and workflow rather than rebuilding layout and styling.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 text-sm leading-7 text-slate-300">
-              Start each subdomain with <code className="font-mono text-cyan-100">AppShell</code>,
-              compose page sections from <code className="font-mono text-cyan-100">Card</code>,
-              and use the OpenClaw utility from server code when a health probe
-              is needed.
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button variant="secondary">Shell ready</Button>
-              <Button variant="ghost">Probe ready</Button>
-            </div>
+          <CardContent className="space-y-2">
+            {[
+              { href: "/tasks", label: "Tasks", desc: "Create & filter tasks" },
+              { href: "/goals", label: "Goals", desc: "Track strategic objectives" },
+              { href: "/timer", label: "Timer", desc: "Focus session tracking" },
+              { href: "/review", label: "Review", desc: "Weekly reflection workflow" },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card-muted)] px-4 py-3 hover:border-[var(--border-default)] hover:bg-[var(--surface-2)] transition-all duration-150 group"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-white" style={{ fontFamily: "var(--font-display)" }}>{item.label}</p>
+                  <p className="text-xs text-[var(--color-ink-soft)]">{item.desc}</p>
+                </div>
+                <span className="text-[var(--color-ink-faint)] group-hover:text-[var(--accent-green)] transition-colors">→</span>
+              </Link>
+            ))}
           </CardContent>
         </Card>
       </div>

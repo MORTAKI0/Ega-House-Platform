@@ -6,9 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { formatTaskToken, getTaskStatusTone } from "@/lib/task-domain";
@@ -67,53 +67,67 @@ export default async function GoalsPage({ searchParams }: GoalsPageProps) {
       eyebrow="Goals Workspace"
       title="Goals"
       description="Track strategic goals and attach them to existing projects."
-      navigation={
-        <>
-          <Badge tone="accent">Goals</Badge>
-          <Badge>Planning</Badge>
-          <Badge>Supabase Live</Badge>
-        </>
-      }
     >
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        {/* Goals list */}
         <Card>
           <CardHeader>
-            <CardTitle>Goals list</CardTitle>
-            <CardDescription>
-              Current goals across projects, ordered by recent updates.
-            </CardDescription>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <CardTitle>Goals list</CardTitle>
+                <CardDescription>
+                  Current goals across projects, ordered by recent updates.
+                </CardDescription>
+              </div>
+              <span className="text-sm font-semibold text-[var(--color-ink-muted)]">
+                {goals.length} goal{goals.length !== 1 ? "s" : ""}
+              </span>
+            </div>
           </CardHeader>
           <CardContent>
             {goals.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-5 text-sm leading-7 text-slate-400">
-                No goals yet.
-              </p>
+              <div className="flex flex-col items-center justify-center py-12 rounded-xl border border-dashed border-white/10 bg-white/[0.015] text-center">
+                <div className="w-10 h-10 rounded-xl bg-white/[0.05] flex items-center justify-center mb-3">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-ink-soft)]">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="6" />
+                    <circle cx="12" cy="12" r="2" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-[var(--color-ink-muted)]">No goals yet</p>
+                <p className="text-xs text-[var(--color-ink-faint)] mt-1">Create a goal to start tracking progress</p>
+              </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {goals.map((goal) => (
                   <article
                     id={`goal-${goal.id}`}
                     key={goal.id}
-                    className="scroll-mt-24 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-4"
+                    className="scroll-mt-24 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card-muted)] px-4 py-3.5 hover:border-[var(--border-default)] hover:bg-[var(--surface-2)] transition-all duration-150"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h3 className="text-base font-medium text-slate-100">{goal.title}</h3>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3
+                          className="text-sm font-semibold text-white leading-snug"
+                          style={{ fontFamily: "var(--font-display)" }}
+                        >
+                          {goal.title}
+                        </h3>
+                        <p className="text-xs text-[var(--color-ink-soft)] mt-0.5">
+                          {goal.projects?.name ?? "Unknown project"}
+                        </p>
+                      </div>
                       <Badge tone={getTaskStatusTone(goal.status)}>
                         {formatTaskToken(goal.status)}
                       </Badge>
                     </div>
-                    <p className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">
-                      {goal.projects?.name ?? "Unknown project"}
-                    </p>
                     {goal.description ? (
-                      <p className="mt-2 text-sm leading-7 text-slate-300">
+                      <p className="mt-2 text-xs leading-relaxed text-[var(--color-ink-muted)]">
                         {goal.description}
                       </p>
                     ) : null}
-                    <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
-                      <p className="pt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
-                        Update goal status inline.
-                      </p>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] text-[var(--color-ink-faint)]">Update status inline</p>
                       <InlineGoalStatusForm
                         action={updateGoalStatusAction}
                         goalId={goal.id}
@@ -129,18 +143,17 @@ export default async function GoalsPage({ searchParams }: GoalsPageProps) {
           </CardContent>
         </Card>
 
+        {/* Create goal */}
         <Card>
           <CardHeader>
             <CardTitle>Create goal</CardTitle>
-            <CardDescription>
-              Add a goal scoped to a project.
-            </CardDescription>
+            <CardDescription>Add a goal scoped to a project.</CardDescription>
           </CardHeader>
           <CardContent>
             {projects.length === 0 ? (
-              <p className="rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm leading-7 text-amber-100">
+              <div className="rounded-xl border border-amber-400/20 bg-amber-400/8 px-4 py-3 text-xs leading-relaxed text-amber-200">
                 Create a project first before adding goals.
-              </p>
+              </div>
             ) : (
               <CreateGoalForm projects={projects} />
             )}

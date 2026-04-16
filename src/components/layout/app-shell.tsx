@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { headers } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 
 import { cn } from "@/lib/utils";
-import { headers } from "next/headers";
+import { Sidebar, type SidebarProject } from "./sidebar";
 
 type AppShellProps = {
   children: ReactNode;
@@ -10,54 +11,75 @@ type AppShellProps = {
   title: string;
   description?: string;
   actions?: ReactNode;
+  /** Deprecated – kept for backwards compat, but no longer rendered */
   navigation?: ReactNode;
   className?: string;
   contentClassName?: string;
 };
 
-type WorkspaceNavItem = {
-  href: `/${string}`;
-  label: string;
-};
-
-const WORKSPACE_NAV_ITEMS: WorkspaceNavItem[] = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/tasks", label: "Tasks" },
-  { href: "/goals", label: "Goals" },
-  { href: "/timer", label: "Timer" },
-  { href: "/review", label: "Review" },
-];
-
-function isActiveWorkspace(pathname: string, href: `/${string}`) {
-  return pathname === href || pathname.startsWith(`${href}/`);
+async function getSidebarProjects(): Promise<SidebarProject[]> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("projects")
+      .select("id, name")
+      .order("name", { ascending: true })
+      .limit(15);
+    return data ?? [];
+  } catch {
+    return [];
+  }
 }
 
-async function WorkspaceNav() {
-  const headerStore = await headers();
-  const pathname = headerStore.get("x-current-path") ?? "/";
-
+async function TopBar({ title }: { title: string }) {
   return (
-    <nav aria-label="Workspace navigation" className="flex flex-wrap gap-2">
-      {WORKSPACE_NAV_ITEMS.map((item) => {
-        const isActive = isActiveWorkspace(pathname, item.href);
+    <div className="ega-topbar flex items-center justify-between px-6 gap-4">
+      {/* Page title (mobile) */}
+      <h1
+        className="text-sm font-semibold text-white truncate lg:hidden"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        {title}
+      </h1>
 
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={isActive ? "page" : undefined}
-            className={cn(
-              "inline-flex h-10 items-center rounded-full border px-4 text-sm font-medium transition",
-              isActive
-                ? "border-cyan-300/40 bg-cyan-400/15 text-cyan-100 shadow-[0_0_0_1px_rgba(103,232,249,0.12)]"
-                : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/20 hover:bg-white/[0.06] hover:text-white",
-            )}
-          >
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
+      {/* Search */}
+      <label className="hidden sm:flex items-center gap-2.5 flex-1 max-w-sm bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 h-9 text-sm text-slate-400 cursor-text hover:bg-white/[0.06] transition-colors">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <span>Search tasks...</span>
+      </label>
+
+      {/* Right side actions */}
+      <div className="flex items-center gap-2 ml-auto">
+        {/* Upgrade hint */}
+        <span className="hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium border border-white/10 text-slate-400 hover:text-slate-200 cursor-pointer transition-colors">
+          Upgrade
+        </span>
+
+        {/* Notifications */}
+        <button className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] transition-colors">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 01-3.46 0" />
+          </svg>
+        </button>
+
+        {/* Settings */}
+        <button className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] transition-colors">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+          </svg>
+        </button>
+
+        {/* Avatar */}
+        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[var(--accent-green)] to-[var(--accent-cyan)] flex items-center justify-center text-xs font-bold text-[#0d1117] flex-shrink-0 select-none">
+          EG
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -67,52 +89,53 @@ export async function AppShell({
   title,
   description,
   actions,
-  navigation,
   className,
   contentClassName,
 }: AppShellProps) {
+  const headerStore = await headers();
+  const currentPath = headerStore.get("x-current-path") ?? "/";
+  const projects = await getSidebarProjects();
+
   return (
-    <main
-      className={cn(
-        "flex min-h-screen px-4 py-6 text-slate-100 sm:px-6",
-        className,
-      )}
-    >
-      <section className="mx-auto flex w-full max-w-6xl flex-1 flex-col rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-[0_32px_120px_rgba(2,6,23,0.65)] backdrop-blur sm:p-8">
-        <div className="flex flex-col gap-6 border-b border-white/8 pb-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-4">
-              {eyebrow ? (
-                <p className="text-xs font-medium uppercase tracking-[0.35em] text-cyan-200/70">
-                  {eyebrow}
-                </p>
-              ) : null}
-              <div className="space-y-3">
-                <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+    <div className="ega-shell">
+      <Sidebar projects={projects} currentPath={currentPath} />
+
+      <main className={cn("ega-main", className)}>
+        <TopBar title={title} />
+
+        <div className={cn("ega-content", contentClassName)}>
+          {/* Page header */}
+          <div className="mb-6 md:mb-8">
+            {eyebrow && (
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent-green)] mb-2 opacity-80">
+                {eyebrow}
+              </p>
+            )}
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+              <div>
+                <h1
+                  className="text-2xl sm:text-3xl font-bold tracking-tight text-white"
+                  style={{ fontFamily: "var(--font-display)" }}
+                >
                   {title}
                 </h1>
-                {description ? (
-                  <p className="max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+                {description && (
+                  <p className="mt-1.5 text-sm text-[var(--color-ink-muted)] max-w-2xl leading-relaxed">
                     {description}
                   </p>
-                ) : null}
+                )}
               </div>
+              {actions && (
+                <div className="flex flex-wrap items-center gap-2.5 flex-shrink-0">
+                  {actions}
+                </div>
+              )}
             </div>
-
-            {actions ? (
-              <div className="flex flex-wrap items-center gap-3">{actions}</div>
-            ) : null}
           </div>
 
-          <WorkspaceNav />
-
-          {navigation ? (
-            <div className="flex flex-wrap items-center gap-3">{navigation}</div>
-          ) : null}
+          {children}
         </div>
-
-        <div className={cn("pt-8", contentClassName)}>{children}</div>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }

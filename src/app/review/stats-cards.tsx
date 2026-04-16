@@ -23,29 +23,29 @@ function formatStatusToken(value: string) {
 
 export function StatsCards({ stats }: StatsCardsProps) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <article className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Tasks created</p>
-        <p className="mt-2 text-2xl font-semibold text-slate-100">{stats.tasksCreated}</p>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <article className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card-muted)] p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-faint)]">Tasks created</p>
+        <p className="mt-2 text-2xl font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>{stats.tasksCreated}</p>
       </article>
 
-      <article className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Sessions logged</p>
-        <p className="mt-2 text-2xl font-semibold text-slate-100">{stats.sessionsLogged}</p>
+      <article className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card-muted)] p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-faint)]">Sessions logged</p>
+        <p className="mt-2 text-2xl font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>{stats.sessionsLogged}</p>
       </article>
 
-      <article className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Tracked time</p>
-        <p className="mt-2 text-2xl font-semibold text-slate-100">
+      <article className="rounded-xl border border-[var(--accent-green-border)] bg-[var(--accent-green-dim)] p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--accent-green)] opacity-80">Tracked time</p>
+        <p className="mt-2 text-2xl font-bold text-[var(--accent-green)]" style={{ fontFamily: "var(--font-display)" }}>
           {formatDurationLabel(stats.trackedSeconds)}
         </p>
       </article>
 
-      <article className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Goals touched</p>
-        <p className="mt-2 text-2xl font-semibold text-slate-100">{stats.goalsTouched}</p>
+      <article className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card-muted)] p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--color-ink-faint)]">Goals touched</p>
+        <p className="mt-2 text-2xl font-bold text-white" style={{ fontFamily: "var(--font-display)" }}>{stats.goalsTouched}</p>
         {stats.goalStatusCounts.length > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-1.5">
             {stats.goalStatusCounts.map((entry) => (
               <Badge key={entry.status}>
                 {entry.count} {formatStatusToken(entry.status)}
@@ -53,11 +53,12 @@ export function StatsCards({ stats }: StatsCardsProps) {
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-xs text-slate-400">No goal updates this week.</p>
+          <p className="mt-2 text-xs text-[var(--color-ink-faint)]">No goal updates this week.</p>
         )}
       </article>
     </div>
   );
 }
+
 
 export type { WeeklyStats };
