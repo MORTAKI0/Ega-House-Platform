@@ -67,14 +67,14 @@ export function CreateTaskForm({
         <div className="space-y-2">
           <label
             htmlFor="projectId"
-            className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider"
+            className="glass-label text-etch mb-1.5"
           >
             Project
           </label>
           {isProjectScoped ? (
             <>
               <input type="hidden" name="projectId" value={state.values.projectId} />
-              <div className="flex h-9 items-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3.5 text-sm text-slate-100">
+              <div className="flex h-9 items-center input-instrument px-3.5 text-sm" style={{ color: "var(--muted-foreground)" }}>
                 {projects.find((project) => project.id === state.values.projectId)?.name ??
                   "Selected project"}
               </div>
@@ -85,7 +85,7 @@ export function CreateTaskForm({
               name="projectId"
               defaultValue={state.values.projectId}
               required
-              className="h-9 w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-input)] px-3.5 text-sm text-white outline-none transition hover:border-[var(--border-strong)] focus:border-[var(--accent-green-border)] focus:ring-2 focus:ring-[var(--accent-green)] focus:ring-opacity-15"
+              className="input-instrument h-8 text-xs"
             >
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -138,7 +138,7 @@ export function CreateTaskForm({
         <div className="space-y-2">
           <label
             htmlFor="priority"
-            className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider"
+            className="glass-label text-etch mb-1.5"
           >
             Priority
           </label>
@@ -160,7 +160,7 @@ export function CreateTaskForm({
       <div className="space-y-2">
         <label
           htmlFor="description"
-          className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider"
+          className="glass-label text-etch mb-1.5"
         >
           Description (optional)
         </label>
@@ -175,7 +175,8 @@ export function CreateTaskForm({
       {state.error ? (
         <div
           role="alert"
-          className="rounded-xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-xs leading-relaxed text-rose-300"
+          className="rounded-sm px-4 py-3 text-xs"
+          style={{ border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.05)", color: "var(--signal-error)" }}
         >
           {state.error}
         </div>

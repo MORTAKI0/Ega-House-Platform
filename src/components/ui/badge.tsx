@@ -1,32 +1,37 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-const badgeTones = {
-  neutral: "border-white/10 bg-white/[0.06] text-slate-300",
-  accent:  "border-[var(--accent-green-border)] bg-[var(--accent-green-dim)] text-[var(--accent-green)]",
-  success: "border-emerald-400/25 bg-emerald-400/10 text-emerald-300",
-  warning: "border-amber-400/25 bg-amber-400/10 text-amber-300",
-  danger:  "border-rose-400/25 bg-rose-400/10 text-rose-300",
-  info:    "border-blue-400/20 bg-blue-400/10 text-blue-300",
-} as const;
+// New instrument tones
+type InstrumentTone = "active" | "muted" | "warn" | "error" | "info";
+
+// Legacy tones from getTaskStatusTone() — mapped to instrument equivalents
+type LegacyTone = "success" | "danger" | "accent" | "neutral";
+
+type BadgeTone = InstrumentTone | LegacyTone;
+
+function resolveTone(tone: BadgeTone): string {
+  const map: Record<BadgeTone, string> = {
+    // Instrument tones
+    active: "status-badge status-badge-active",
+    muted:  "status-badge status-badge-muted",
+    warn:   "status-badge status-badge-warn",
+    error:  "status-badge status-badge-error",
+    info:   "status-badge status-badge-info",
+    // Legacy → instrument mapping
+    success: "status-badge status-badge-active",
+    danger:  "status-badge status-badge-error",
+    accent:  "status-badge status-badge-info",
+    neutral: "status-badge status-badge-muted",
+  };
+  return map[tone] ?? map.muted;
+}
 
 export type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
-  tone?: keyof typeof badgeTones;
+  tone?: BadgeTone;
 };
 
-export function Badge({
-  className,
-  tone = "neutral",
-  ...props
-}: BadgeProps) {
+export function Badge({ className, tone = "muted", ...props }: BadgeProps) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.16em]",
-        badgeTones[tone],
-        className,
-      )}
-      {...props}
-    />
+    <span className={cn(resolveTone(tone), className)} {...props} />
   );
 }
