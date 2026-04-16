@@ -20,6 +20,7 @@ export type CreateTaskFormState = {
     description: string;
     status: string;
     priority: string;
+    returnTo: string;
   };
 };
 
@@ -35,10 +36,23 @@ function getTasksReturnPath(rawReturnTo: unknown) {
   return returnTo.startsWith("/tasks") ? returnTo : "/tasks";
 }
 
-function redirectWithTasksError(returnPath: string, errorMessage: string) {
+function getTasksPathname(returnPath: string) {
+  return new URL(returnPath, "https://egawilldoit.online").pathname;
+}
+
+function redirectWithTasksError(
+  returnPath: string,
+  errorMessage: string,
+  taskId?: string,
+) {
   const target = new URL(returnPath, "https://egawilldoit.online");
-  target.searchParams.set("statusUpdateError", errorMessage);
-  redirect(`${target.pathname}${target.search}`);
+  target.searchParams.set("taskUpdateError", errorMessage);
+
+  if (taskId) {
+    target.searchParams.set("taskUpdateTaskId", taskId);
+  }
+
+  redirect(`${target.pathname}${target.search}${taskId ? `#task-${taskId}` : ""}`);
 }
 
 export async function createTaskAction(
@@ -51,6 +65,7 @@ export async function createTaskAction(
   const description = String(formData.get("description") ?? "").trim();
   const status = String(formData.get("status") ?? "todo").trim();
   const priority = String(formData.get("priority") ?? "medium").trim();
+  const returnTo = getTasksReturnPath(formData.get("returnTo"));
 
   const values = {
     title,
@@ -59,6 +74,7 @@ export async function createTaskAction(
     description,
     status,
     priority,
+    returnTo,
   };
 
   if (!title) {
@@ -98,6 +114,8 @@ export async function createTaskAction(
   }
 
   revalidatePath("/tasks");
+  revalidatePath("/tasks/projects");
+  revalidatePath(getTasksPathname(returnTo));
   revalidatePath("/timer");
 
   return {
@@ -109,32 +127,41 @@ export async function createTaskAction(
       description: "",
       status: "todo",
       priority: "medium",
+      returnTo,
     },
   };
 }
 
-export async function updateTaskStatusAction(formData: FormData) {
+export async function updateTaskInlineAction(formData: FormData) {
   const returnPath = getTasksReturnPath(formData.get("returnTo"));
   const taskId = String(formData.get("taskId") ?? "").trim();
   const status = String(formData.get("status") ?? "").trim();
+  const priority = String(formData.get("priority") ?? "").trim();
 
-  if (!taskId || !isTaskStatus(status)) {
-    redirectWithTasksError(returnPath, "Task status update request is invalid.");
+  if (!taskId || !isTaskStatus(status) || !isTaskPriority(priority)) {
+    redirectWithTasksError(returnPath, "Task update request is invalid.", taskId);
   }
 
+  const updatedAt = new Date().toISOString();
   const supabase = await createClient();
   const { error } = await supabase
     .from("tasks")
     .update({
       status,
-      updated_at: new Date().toISOString(),
+      priority,
+      updated_at: updatedAt,
     })
     .eq("id", taskId);
 
   if (error) {
-    redirectWithTasksError(returnPath, "Unable to update task status right now.");
+    redirectWithTasksError(returnPath, "Unable to update task right now.", taskId);
   }
 
+  const returnPathname = getTasksPathname(returnPath);
+
   revalidatePath("/tasks");
-  redirect(returnPath);
+  revalidatePath("/tasks/projects");
+  revalidatePath(returnPathname);
+  revalidatePath("/timer");
+  redirect(`${returnPath}#task-${taskId}`);
 }

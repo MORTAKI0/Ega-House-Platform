@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { AppShell } from "@/components/layout/app-shell";
+import Link from "next/link";
+
+import { TasksWorkspaceShell } from "@/components/tasks/tasks-workspace-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -154,7 +156,14 @@ function ProjectCard({ project }: { project: ProjectCardData }) {
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
-            <CardTitle>{project.name}</CardTitle>
+            <CardTitle>
+              <Link
+                href={`/tasks/projects/${project.slug}`}
+                className="transition hover:text-cyan-100"
+              >
+                {project.name}
+              </Link>
+            </CardTitle>
             <CardDescription className="font-mono text-xs uppercase tracking-[0.22em] text-slate-500">
               {project.slug}
             </CardDescription>
@@ -169,6 +178,17 @@ function ProjectCard({ project }: { project: ProjectCardData }) {
       </CardHeader>
 
       <CardContent className="space-y-5">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+            Project detail
+          </p>
+          <Link
+            href={`/tasks/projects/${project.slug}`}
+            className="text-sm font-medium text-cyan-100 transition hover:text-cyan-200"
+          >
+            Open project
+          </Link>
+        </div>
         <div className="flex flex-wrap gap-2">
           {project.statusCounts.length ? (
             project.statusCounts.map((entry) => (
@@ -225,10 +245,10 @@ export default async function TasksProjectsPage() {
   const projects = await getProjectsWithTaskContext();
 
   return (
-    <AppShell
+    <TasksWorkspaceShell
       eyebrow="Tasks Workspace"
       title="Projects"
-      description="Projects grounded in the live tasks schema, with enough context to see task volume and current execution without building detail pages yet."
+      description="Projects grounded in the live tasks schema, with task volume, recent execution context, and direct links into each project workspace."
       actions={
         <form action="/tasks/projects/new">
           <Button type="submit">Create project</Button>
@@ -237,8 +257,8 @@ export default async function TasksProjectsPage() {
       navigation={
         <>
           <Badge tone="accent">Projects</Badge>
-          <Badge>Tasks MVP</Badge>
-          <Badge>Read Only</Badge>
+          <Badge>Task Context</Badge>
+          <Badge>Detail Pages</Badge>
         </>
       }
     >
@@ -251,6 +271,6 @@ export default async function TasksProjectsPage() {
       ) : (
         <EmptyState />
       )}
-    </AppShell>
+    </TasksWorkspaceShell>
   );
 }

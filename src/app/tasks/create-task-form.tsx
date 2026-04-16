@@ -16,18 +16,29 @@ import { type CreateTaskFormState, createTaskAction } from "./actions";
 type CreateTaskFormProps = {
   projects: Array<{ id: string; name: string }>;
   goals: Array<{ id: string; title: string; project_id: string }>;
+  projectId?: string;
+  returnTo?: string;
 };
 
-export function CreateTaskForm({ projects, goals }: CreateTaskFormProps) {
+export function CreateTaskForm({
+  projects,
+  goals,
+  projectId,
+  returnTo = "/tasks",
+}: CreateTaskFormProps) {
+  const selectedProjectId = projectId ?? projects[0]?.id ?? "";
+  const isProjectScoped = Boolean(projectId);
+
   const initialState: CreateTaskFormState = {
     error: null,
     values: {
       title: "",
-      projectId: projects[0]?.id ?? "",
+      projectId: selectedProjectId,
       goalId: "",
       description: "",
       status: "todo",
       priority: "medium",
+      returnTo,
     },
   };
 
@@ -38,6 +49,7 @@ export function CreateTaskForm({ projects, goals }: CreateTaskFormProps) {
 
   return (
     <form action={formAction} className="space-y-4">
+      <input type="hidden" name="returnTo" value={state.values.returnTo} />
       <div className="space-y-2">
         <label htmlFor="title" className="text-sm font-medium text-slate-200">
           Title
@@ -59,19 +71,29 @@ export function CreateTaskForm({ projects, goals }: CreateTaskFormProps) {
           >
             Project
           </label>
-          <select
-            id="projectId"
-            name="projectId"
-            defaultValue={state.values.projectId}
-            required
-            className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition focus:border-cyan-300/50 focus-visible:ring-4 focus-visible:ring-cyan-300/15"
-          >
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
+          {isProjectScoped ? (
+            <>
+              <input type="hidden" name="projectId" value={state.values.projectId} />
+              <div className="flex min-h-12 items-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm text-slate-100">
+                {projects.find((project) => project.id === state.values.projectId)?.name ??
+                  "Selected project"}
+              </div>
+            </>
+          ) : (
+            <select
+              id="projectId"
+              name="projectId"
+              defaultValue={state.values.projectId}
+              required
+              className="min-h-12 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 text-sm text-white outline-none transition focus:border-cyan-300/50 focus-visible:ring-4 focus-visible:ring-cyan-300/15"
+            >
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="space-y-2">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { ActiveTimerDisplay } from "@/components/timer/active-timer-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,42 +12,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
-import { formatTaskToken, getTaskStatusTone } from "@/lib/task-domain";
+import { formatDurationLabel, getTaskTotalDurationMap } from "@/lib/task-session";
+import { formatTimerDateTime } from "@/lib/timer-domain";
 
-import {
-  resolveSessionConflictAction,
-  startTimerAction,
-  stopTimerAction,
-} from "./actions";
+import { resolveSessionConflictAction, startTimerAction } from "./actions";
 
 export const metadata: Metadata = {
   title: "Timer | EGA House",
   description: "Start and stop focused task sessions.",
 };
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-function formatDuration(seconds: number) {
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-
-  if (hrs > 0) {
-    return `${hrs}h ${mins}m ${secs}s`;
+function getTaskContextHref(taskId: string | null | undefined, projectSlug: string | null | undefined) {
+  if (!taskId || !projectSlug) {
+    return null;
   }
 
-  if (mins > 0) {
-    return `${mins}m ${secs}s`;
-  }
-
-  return `${secs}s`;
+  return `/tasks/projects/${projectSlug}#task-${taskId}`;
 }
 
 async function getTimerData() {
@@ -60,13 +41,15 @@ async function getTimerData() {
 
   const openSessionsPromise = supabase
     .from("task_sessions")
-    .select("id, task_id, started_at, tasks(title, status, projects(name))")
+    .select(
+      "id, task_id, started_at, tasks(id, title, description, status, priority, goals(title), projects(name, slug))",
+    )
     .is("ended_at", null)
     .order("started_at", { ascending: false });
 
   const recentSessionsPromise = supabase
     .from("task_sessions")
-    .select("id, started_at, ended_at, duration_seconds, tasks(title, projects(name))")
+    .select("id, started_at, ended_at, duration_seconds, tasks(id, title, projects(name))")
     .not("ended_at", "is", null)
     .order("ended_at", { ascending: false })
     .limit(6);
@@ -91,10 +74,20 @@ async function getTimerData() {
     );
   }
 
+  const taskIds = [
+    ...tasksResult.data.map((task) => task.id),
+    ...openSessionsResult.data.map((session) => session.task_id),
+    ...recentSessionsResult.data
+      .map((session) => session.tasks?.id)
+      .filter((taskId): taskId is string => Boolean(taskId)),
+  ];
+  const taskTotalDurations = await getTaskTotalDurationMap(supabase, taskIds);
+
   return {
     tasks: tasksResult.data,
     openSessions: openSessionsResult.data,
     recentSessions: recentSessionsResult.data,
+    taskTotalDurations,
   };
 }
 
@@ -115,10 +108,14 @@ function getActionErrorMessage(value: string | undefined) {
 export default async function TimerPage({ searchParams }: TimerPageProps) {
   const resolvedSearchParams = await searchParams;
   const actionError = getActionErrorMessage(resolvedSearchParams.actionError);
-  const { tasks, openSessions, recentSessions } = await getTimerData();
+  const { tasks, openSessions, recentSessions, taskTotalDurations } = await getTimerData();
   const activeSession = openSessions[0] ?? null;
   const recoveredExtraSessionCount = Math.max(0, openSessions.length - 1);
   const hasSessionConflict = recoveredExtraSessionCount > 0;
+  const activeTaskContextHref = getTaskContextHref(
+    activeSession?.task_id,
+    activeSession?.tasks?.projects?.slug,
+  );
 
   return (
     <AppShell
@@ -167,37 +164,14 @@ export default async function TimerPage({ searchParams }: TimerPageProps) {
             ) : null}
 
             {activeSession ? (
-              <div className="space-y-4 rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                <div className="space-y-1">
-                  <p className="text-base font-medium text-slate-100">
-                    {activeSession.tasks?.title ?? "Untitled task"}
-                  </p>
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                    {activeSession.tasks?.projects?.name ?? "Unknown project"}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={getTaskStatusTone(activeSession.tasks?.status ?? "todo")}>
-                    {formatTaskToken(activeSession.tasks?.status ?? "todo")}
-                  </Badge>
-                  <Badge>
-                    Started {formatDateTime(activeSession.started_at)}
-                  </Badge>
-                </div>
-
-                <form action={stopTimerAction}>
-                  <input type="hidden" name="sessionId" value={activeSession.id} />
-                  <input type="hidden" name="returnTo" value="/timer" />
-                  <Button
-                    type="submit"
-                    variant="danger"
-                    disabled={hasSessionConflict}
-                  >
-                    Stop timer
-                  </Button>
-                </form>
-              </div>
+              <ActiveTimerDisplay
+                session={activeSession}
+                taskContextHref={activeTaskContextHref}
+                hasSessionConflict={hasSessionConflict}
+                totalTrackedDurationSeconds={
+                  taskTotalDurations[activeSession.task_id] ?? 0
+                }
+              />
             ) : (
               <form action={startTimerAction} className="space-y-4">
                 <label className="block space-y-2">
@@ -257,8 +231,11 @@ export default async function TimerPage({ searchParams }: TimerPageProps) {
                       {session.tasks?.projects?.name ?? "Unknown project"}
                     </p>
                     <p className="mt-2 text-xs text-slate-300">
-                      {session.ended_at ? formatDateTime(session.ended_at) : "-"} ·{" "}
-                      {formatDuration(session.duration_seconds ?? 0)}
+                      {session.ended_at ? formatTimerDateTime(session.ended_at) : "-"} ·{" "}
+                      {formatDurationLabel(session.duration_seconds ?? 0)}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Total tracked {formatDurationLabel(taskTotalDurations[session.tasks?.id ?? ""] ?? 0)}
                     </p>
                   </div>
                 ))}

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AppShell } from "@/components/layout/app-shell";
+import { TasksWorkspaceShell } from "@/components/tasks/tasks-workspace-shell";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function NewProjectPage() {
   return (
-    <AppShell
+    <TasksWorkspaceShell
       eyebrow="Tasks Workspace"
       title="Create Project"
       description="Add a project to anchor goals and tasks in the workspace."
@@ -45,6 +45,6 @@ export default function NewProjectPage() {
           </CardContent>
         </Card>
       </div>
-    </AppShell>
+    </TasksWorkspaceShell>
   );
 }
