@@ -1,34 +1,43 @@
 import { NextResponse } from "next/server";
 
 import type { MobileTaskMutationResponse } from "@/lib/contracts/mobile";
-import { unpinTaskInFocusQueue } from "@/lib/services/focus-queue-service";
+import { cancelTaskReminder } from "@/lib/services/task-service";
 import { resolveMobileRequestAuth } from "@/app/api/mobile/_lib/auth";
 import { getMobileTaskItemById, mobileErrorResponse } from "@/app/api/mobile/_lib/helpers";
 
 type RouteContext = {
   params: Promise<{
     id: string;
+    reminderId: string;
   }>;
 };
 
-export async function POST(request: Request, context: RouteContext) {
+export async function PATCH(request: Request, context: RouteContext) {
   const authResult = await resolveMobileRequestAuth(request);
   if (!authResult.ok) {
     return mobileErrorResponse(authResult.code, authResult.message, authResult.status);
   }
 
-  const { id } = await context.params;
-  const unpinResult = await unpinTaskInFocusQueue(id, { supabase: authResult.supabase });
-  if (unpinResult.errorMessage) {
-    if (unpinResult.errorMessage.includes("unavailable")) {
-      return mobileErrorResponse("NOT_FOUND", unpinResult.errorMessage, 404);
+  const { id, reminderId } = await context.params;
+  const reminderResult = await cancelTaskReminder(
+    {
+      taskId: id,
+      reminderId,
+      status: "cancelled",
+    },
+    { supabase: authResult.supabase },
+  );
+
+  if (reminderResult.errorMessage) {
+    if (reminderResult.errorMessage.includes("not found") || reminderResult.errorMessage.includes("available")) {
+      return mobileErrorResponse("NOT_FOUND", reminderResult.errorMessage, 404);
     }
-    return mobileErrorResponse("VALIDATION_ERROR", unpinResult.errorMessage, 400);
+    return mobileErrorResponse("VALIDATION_ERROR", reminderResult.errorMessage, 400);
   }
 
   const taskResult = await getMobileTaskItemById(authResult.supabase, id);
   if (taskResult.errorMessage || !taskResult.data) {
-    return mobileErrorResponse("INTERNAL_ERROR", "Unable to load unpinned task.", 500);
+    return mobileErrorResponse("INTERNAL_ERROR", "Unable to load updated task.", 500);
   }
 
   return NextResponse.json(
